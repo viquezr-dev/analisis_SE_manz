@@ -195,11 +195,11 @@
     <!-- 1. Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
-    <!-- 2. heatmap.js (dependencia de leaflet-heatmap) -->
+    <!-- 2. heatmap.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.5/heatmap.min.js"></script>
     
-    <!-- 3. leaflet-heatmap (debe cargarse DESPUÉS de heatmap.js) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-heatmap/1.1.0/leaflet-heatmap.min.js"></script>
+    <!-- 3. leaflet-heatmap - VERSIÓN QUE FUNCIONA -->
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-heatmap@1.0.0/leaflet-heatmap.min.js"></script>
     
     <script>
         // ================================================================
@@ -864,7 +864,93 @@
         }
 
         // ================================================================
-        // 11. ACTUALIZAR MAPA
+        // 11. FUNCIÓN DE HEATMAP PERSONALIZADA (FALLBACK)
+        // ================================================================
+        // Esta función crea un heatmap usando canvas directamente si L.heatLayer no está disponible
+        function crearHeatmapFallback(puntos, map, radius, blur) {
+            // Crear un layer de canvas para el heatmap
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Crear un layer personalizado de Leaflet
+            const HeatmapLayer = L.Layer.extend({
+                onAdd: function() {
+                    const pane = this.getPane();
+                    this._canvas = document.createElement('canvas');
+                    this._canvas.style.position = 'absolute';
+                    this._canvas.style.top = '0';
+                    this._canvas.style.left = '0';
+                    this._canvas.style.pointerEvents = 'none';
+                    this._canvas.style.width = '100%';
+                    this._canvas.style.height = '100%';
+                    pane.appendChild(this._canvas);
+                    this._ctx = this._canvas.getContext('2d');
+                    this._reset();
+                    this._draw();
+                },
+                onRemove: function() {
+                    if (this._canvas) {
+                        this._canvas.parentNode.removeChild(this._canvas);
+                    }
+                },
+                _reset: function() {
+                    const size = this._map.getSize();
+                    this._canvas.width = size.x;
+                    this._canvas.height = size.y;
+                    this._canvas.style.width = size.x + 'px';
+                    this._canvas.style.height = size.y + 'px';
+                },
+                _draw: function() {
+                    if (!this._ctx) return;
+                    
+                    const ctx = this._ctx;
+                    const map = this._map;
+                    const size = map.getSize();
+                    
+                    ctx.clearRect(0, 0, size.x, size.y);
+                    
+                    // Dibujar puntos con gradiente radial
+                    const radiusPx = radius || 30;
+                    const blurPx = blur || 15;
+                    
+                    // Encontrar max intensity para normalizar
+                    let maxIntensity = 1;
+                    for (const p of puntos) {
+                        if (p.intensity > maxIntensity) maxIntensity = p.intensity;
+                    }
+                    
+                    for (const p of puntos) {
+                        const point = map.latLngToContainerPoint([p.lat, p.lng]);
+                        const intensity = p.intensity / maxIntensity;
+                        
+                        const grad = ctx.createRadialGradient(
+                            point.x, point.y, 0,
+                            point.x, point.y, radiusPx + blurPx
+                        );
+                        
+                        // Color según intensidad (azul -> cyan -> verde -> amarillo -> rojo)
+                        const r = Math.min(255, Math.round(intensity * 255));
+                        const g = Math.min(255, Math.round((1 - Math.abs(intensity - 0.5) * 2) * 255));
+                        const b = Math.min(255, Math.round((1 - intensity) * 255));
+                        
+                        const alpha = 0.3 + intensity * 0.5;
+                        grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha})`);
+                        grad.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${alpha * 0.6})`);
+                        grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+                        
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, radiusPx + blurPx, 0, Math.PI * 2);
+                        ctx.fillStyle = grad;
+                        ctx.fill();
+                    }
+                }
+            });
+            
+            return new HeatmapLayer();
+        }
+
+        // ================================================================
+        // 12. ACTUALIZAR MAPA
         // ================================================================
         function updateMap() {
             if (!geoJsonData) return;
@@ -899,17 +985,10 @@
                 }
         
                 try {
-                    // Verificar que L.heatLayer existe
-                    if (typeof L.heatLayer !== 'function') {
-                        console.error('❌ L.heatLayer no está disponible');
-                        mostrarPoligonos(featuresFiltradas, variable);
-                        return;
-                    }
-                    
                     const radius = parseInt(document.getElementById('radius-slider').value) || 30;
                     const blur = parseInt(document.getElementById('blur-slider').value) || 15;
                     
-                    // Para leaflet-heatmap, el formato es [lat, lng, intensity]
+                    // Formato para leaflet-heatmap: [lat, lng, intensity]
                     const heatData = puntos.map(p => [p.lat, p.lng, p.intensity]);
                     
                     const heatConfig = {
@@ -928,9 +1007,17 @@
                         }
                     };
         
-                    heatmapLayer = L.heatLayer(heatData, heatConfig).addTo(map);
-                    
-                    console.log(`🔥 Heatmap generado: ${puntos.length} puntos`);
+                    // Intentar usar L.heatLayer
+                    if (typeof L.heatLayer === 'function') {
+                        heatmapLayer = L.heatLayer(heatData, heatConfig).addTo(map);
+                        console.log(`🔥 Heatmap generado con L.heatLayer: ${puntos.length} puntos`);
+                    } else {
+                        // Fallback: usar canvas personalizado
+                        console.warn('⚠️ L.heatLayer no disponible, usando fallback con canvas');
+                        heatmapLayer = crearHeatmapFallback(puntos, map, radius, blur);
+                        heatmapLayer.addTo(map);
+                        console.log(`🔥 Heatmap generado con fallback: ${puntos.length} puntos`);
+                    }
                     
                     // Polígonos transparentes para interacción
                     currentLayer = L.geoJSON({
@@ -1018,7 +1105,7 @@
         }
 
         // ================================================================
-        // 12. LEYENDA
+        // 13. LEYENDA
         // ================================================================
         function updateLegend(variable, features) {
             const legendDiv = document.getElementById('legend');
@@ -1049,10 +1136,10 @@
         }
 
         // ================================================================
-        // 13. ACTUALIZAR HEATMAP (sliders)
+        // 14. ACTUALIZAR HEATMAP (sliders)
         // ================================================================
         function actualizarHeatmapParams() {
-            if (!heatmapLayer || heatmapPoints.length === 0) {
+            if (!heatmapPoints || heatmapPoints.length === 0) {
                 updateMap();
                 return;
             }
@@ -1063,6 +1150,7 @@
             try {
                 if (heatmapLayer) {
                     map.removeLayer(heatmapLayer);
+                    heatmapLayer = null;
                 }
                 
                 const heatData = heatmapPoints.map(p => [p.lat, p.lng, p.intensity]);
@@ -1082,16 +1170,22 @@
                         1.0: 'red'
                     }
                 };
-                
-                heatmapLayer = L.heatLayer(heatData, heatConfig).addTo(map);
-                console.log(`✅ Heatmap actualizado: radius=${radius}px, blur=${blur}px`);
+        
+                if (typeof L.heatLayer === 'function') {
+                    heatmapLayer = L.heatLayer(heatData, heatConfig).addTo(map);
+                    console.log(`✅ Heatmap actualizado: radius=${radius}px, blur=${blur}px`);
+                } else {
+                    heatmapLayer = crearHeatmapFallback(heatmapPoints, map, radius, blur);
+                    heatmapLayer.addTo(map);
+                    console.log(`✅ Heatmap fallback actualizado: radius=${radius}px, blur=${blur}px`);
+                }
             } catch (e) {
                 console.warn('⚠️ Error al actualizar heatmap:', e);
             }
         }
 
         // ================================================================
-        // 14. VERIFICAR LIBRERÍAS
+        // 15. VERIFICAR LIBRERÍAS
         // ================================================================
         function verificarLibrerias() {
             console.log('=== VERIFICACIÓN DE LIBRERÍAS ===');
@@ -1102,12 +1196,12 @@
             if (typeof L.heatLayer === 'function') {
                 console.log('✅ Todas las librerías cargadas correctamente');
             } else {
-                console.warn('⚠️ L.heatLayer NO está disponible');
+                console.log('⚠️ L.heatLayer NO está disponible, se usará fallback con canvas');
             }
         }
 
         // ================================================================
-        // 15. CARGA DEL GEOJSON
+        // 16. CARGA DEL GEOJSON
         // ================================================================
         async function loadGeoJSON() {
             try {
@@ -1140,7 +1234,7 @@
         }
 
         // ================================================================
-        // 16. EVENTOS
+        // 17. EVENTOS
         // ================================================================
         document.getElementById('variable-select').addEventListener('change', function(e) {
             currentVariable = e.target.value;
@@ -1214,10 +1308,10 @@
         window.closeStats = closeStats;
 
         // ================================================================
-        // 17. INICIO
+        // 18. INICIO
         // ================================================================
         console.log('🗺️ Mapa de Manzanas iniciado – RAUL VIQUEZ');
-        console.log('📌 Usando leaflet-heatmap 1.1.0');
+        console.log('📌 Usando leaflet-heatmap con fallback canvas');
         
         verificarLibrerias();
         loadGeoJSON();
