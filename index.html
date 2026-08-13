@@ -117,7 +117,6 @@
 
     <div id="map"></div>
 
-    <!-- Modal de Estadísticas -->
     <div class="modal-overlay" id="statsModal">
         <div class="modal-content">
             <button class="modal-close" onclick="closeStats()">&times;</button>
@@ -228,7 +227,7 @@
         let heatmapConfig = null;
 
         // ================================================================
-        // 3. PALETAS DE COLORES
+        // 3. PALETAS DE COLORES Y FUNCIONES DE RANGOS
         // ================================================================
         const catColors = {
             'MUY_BAJA': '#fcbba1',
@@ -264,18 +263,11 @@
             'PERS_VIV': 'Promedio de personas por vivienda.'
         };
 
-        // ================================================================
-        // VARIABLES DE CACHÉ PARA VIV_OCUP
-        // ================================================================
         let vivOcupCache = null;
         
         function getVivOcupRangos(features) {
-            // Si ya tenemos los rangos en caché, devolverlos
-            if (vivOcupCache) {
-                return vivOcupCache;
-            }
+            if (vivOcupCache) return vivOcupCache;
             
-            // Extraer todos los valores de VIV_OCUP > 0
             const valores = features
                 .map(f => parseFloat(f.properties['VIV_OCUP']))
                 .filter(v => !isNaN(v) && v !== null && v > 0)
@@ -449,7 +441,7 @@
         }
 
         // ================================================================
-        // 5. FILTROS
+        // 4. FILTROS
         // ================================================================
         function getFiltros() {
             const checkboxes = document.querySelectorAll('.filtro-checkbox input[type="checkbox"]');
@@ -479,7 +471,7 @@
         }
 
         // ================================================================
-        // 6. CONSTRUIR FILTROS
+        // 5. CONSTRUIR FILTROS
         // ================================================================
         function construirFiltros(variable) {
             const container = document.getElementById('filtros-container');
@@ -585,7 +577,7 @@
         }
 
         // ================================================================
-        // 7. BUSCADOR DE MANZANA (CON BARR_NOMB Y LUPO_NOMB)
+        // 6. BUSCADOR DE MANZANA
         // ================================================================
         function buscarManzana() {
             const texto = document.getElementById('searchInput').value.toLowerCase().trim();
@@ -640,7 +632,7 @@
         }
 
         // ================================================================
-        // 8. POPUP (CON BARR_NOMB Y LUPO_NOMB)
+        // 7. POPUP
         // ================================================================
         function crearPopup(p) {
             const areaM2 = p.AREA || 0;
@@ -678,7 +670,7 @@
         }
 
         // ================================================================
-        // 9. EXPORTAR CSV
+        // 8. EXPORTAR CSV
         // ================================================================
         function exportarCSV() {
             if (!geoJsonData || allFeatures.length === 0) {
@@ -718,7 +710,7 @@
         }
 
         // ================================================================
-        // 10. ESTADÍSTICAS
+        // 9. ESTADÍSTICAS
         // ================================================================
         function mostrarEstadisticas() {
             document.getElementById('statsModal').classList.add('active');
@@ -802,7 +794,7 @@
         }
 
         // ================================================================
-        // 11. ACTUALIZAR MAPA
+        // 10. ACTUALIZAR MAPA
         // ================================================================
         function updateMap() {
             if (!geoJsonData) return;
@@ -977,7 +969,7 @@
         }
 
         // ================================================================
-        // 12. LEYENDA
+        // 11. LEYENDA
         // ================================================================
         function updateLegend(variable, features) {
             const legendDiv = document.getElementById('legend');
@@ -1008,17 +1000,15 @@
         }
 
         // ================================================================
-        // 13. INICIALIZAR HEATMAP
+        // 12. INICIALIZAR HEATMAP
         // ================================================================
         function initHeatmap() {
-            // Verificar que la librería esté cargada
             if (typeof HeatmapOverlay === 'undefined') {
                 console.warn('⚠️ HeatmapOverlay no está disponible. Reintentando...');
                 setTimeout(initHeatmap, 1000);
                 return;
             }
             
-            // Verificar que heatmapConfig no esté definido previamente
             if (!heatmapConfig) {
                 heatmapConfig = {
                     radius: 25,
@@ -1033,7 +1023,6 @@
                 };
             }
             
-            // Crear nueva instancia de heatmap
             try {
                 heatmapLayer = new HeatmapOverlay(heatmapConfig);
                 console.log('✅ Heatmap inicializado correctamente');
@@ -1044,37 +1033,23 @@
         }
 
         // ================================================================
-        // 14. ACTUALIZAR HEATMAP
+        // 13. ACTUALIZAR HEATMAP
         // ================================================================
         function actualizarHeatmap() {
             if (!heatmapLayer) {
-                console.warn('⚠️ Heatmap no inicializado. Intentando inicializar...');
-                initHeatmap();
-                if (!heatmapLayer) {
-                    console.warn('⚠️ No se pudo inicializar el heatmap');
-                    return;
-                }
+                console.warn('⚠️ Heatmap no inicializado');
+                return;
             }
             
             const radius = parseInt(document.getElementById('radius-slider').value) || 25;
             const blur = parseFloat(document.getElementById('blur-slider').value) / 40 || 0.75;
             
-            // Actualizar configuración
             heatmapConfig.radius = radius;
             heatmapConfig.blur = blur;
             heatmapConfig.scaleRadius = true;
             
             try {
-                // Verificar si el heatmap tiene el método configure
-                if (heatmapLayer.configure) {
-                    heatmapLayer.configure(heatmapConfig);
-                    console.log(`✅ Heatmap configurado: radius=${radius}px, blur=${blur.toFixed(3)}`);
-                }
-                
-                // Forzar actualización
-                if (heatmapLayer._update) {
-                    heatmapLayer._update();
-                } else if (heatmapLayer._heatmap) {
+                if (heatmapLayer._heatmap) {
                     heatmapLayer._heatmap.configure({
                         radius: radius,
                         blur: blur,
@@ -1083,43 +1058,26 @@
                     if (heatmapLayer._heatmap._update) {
                         heatmapLayer._heatmap._update();
                     }
+                } else if (heatmapLayer._update) {
+                    heatmapLayer._update();
                 }
-                
                 console.log(`✅ Heatmap actualizado: radius=${radius}px, blur=${blur.toFixed(3)}`);
             } catch (e) {
                 console.warn('⚠️ Error al actualizar heatmap:', e);
-                // Recrear el heatmap si falla
-                if (currentMode === 'heatmap' && geoJsonData) {
-                    console.log('🔄 Recreando heatmap...');
-                    // Eliminar capa anterior
-                    if (map.hasLayer(heatmapLayer)) {
-                        map.removeLayer(heatmapLayer);
-                    }
-                    // Crear nueva instancia
-                    try {
-                        heatmapLayer = new HeatmapOverlay(heatmapConfig);
-                        map.addLayer(heatmapLayer);
-                        // Recargar datos
-                        updateMap();
-                    } catch (e2) {
-                        console.error('❌ Error al recrear heatmap:', e2);
-                    }
-                }
             }
         }
 
+        // ================================================================
+        // 14. DIAGNÓSTICO
+        // ================================================================
+        function diagnosticarHeatmap() {
+            console.log('=== DIAGNÓSTICO DEL HEATMAP ===');
+            console.log('HeatmapOverlay disponible:', typeof HeatmapOverlay);
+            console.log('heatmapLayer:', heatmapLayer);
+            console.log('heatmapConfig:', heatmapConfig);
+            console.log('Modo actual:', currentMode);
+        }
 
-            // ================================================================
-            // DIAGNÓSTICO DEL HEATMAP (para verificar en consola)
-            // ================================================================
-            function diagnosticarHeatmap() {
-                console.log('=== DIAGNÓSTICO DEL HEATMAP ===');
-                console.log('HeatmapOverlay disponible:', typeof HeatmapOverlay);
-                console.log('heatmapLayer:', heatmapLayer);
-                console.log('heatmapConfig:', heatmapConfig);
-                console.log('Modo actual:', currentMode);
-                console.log('Capas en el mapa:', map._layers);
-            }
         // ================================================================
         // 15. CARGA DEL GEOJSON
         // ================================================================
@@ -1178,7 +1136,9 @@
             this.classList.add('active');
             document.getElementById('btn-heatmap').classList.remove('active');
             document.getElementById('heatmap-controls').style.display = 'none';
-            if (heatmapLayer) map.removeLayer(heatmapLayer);
+            if (heatmapLayer && map.hasLayer(heatmapLayer)) {
+                map.removeLayer(heatmapLayer);
+            }
             updateMap();
         });
 
@@ -1187,6 +1147,9 @@
             this.classList.add('active');
             document.getElementById('btn-polygon').classList.remove('active');
             document.getElementById('heatmap-controls').style.display = 'block';
+            if (!heatmapLayer) {
+                initHeatmap();
+            }
             updateMap();
         });
 
@@ -1198,7 +1161,6 @@
             if (e.target === this) closeStats();
         });
 
-        // Controles de heatmap
         const radiusSlider = document.getElementById('radius-slider');
         const blurSlider = document.getElementById('blur-slider');
         const radiusVal = document.getElementById('radius-val');
@@ -1234,7 +1196,6 @@
         initHeatmap();
         loadGeoJSON();
         
-        // Sincronizar sliders
         document.getElementById('radius-slider').value = 30;
         document.getElementById('radius-val').innerText = '30';
         document.getElementById('blur-slider').value = 15;
