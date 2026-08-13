@@ -166,12 +166,12 @@
         </div>
 
         <div id="heatmap-controls" class="heatmap-controls">
-            <label>Radio: <span id="radius-val">10</span>px</label>
-            <input type="range" id="radius-slider" min="5" max="40" value="10" step="1">
-            <label>Difuminado: <span id="blur-val">10</span>px</label>
-            <input type="range" id="blur-slider" min="5" max="30" value="10" step="1">
-            <label>Opacidad: <span id="opacity-val">0.7</span></label>
-            <input type="range" id="opacity-slider" min="0.1" max="1.0" value="0.7" step="0.05">
+            <label>Radio: <span id="radius-val">8</span>px</label>
+            <input type="range" id="radius-slider" min="3" max="30" value="8" step="1">
+            <label>Difuminado: <span id="blur-val">8</span>px</label>
+            <input type="range" id="blur-slider" min="3" max="25" value="8" step="1">
+            <label>Opacidad: <span id="opacity-val">0.8</span></label>
+            <input type="range" id="opacity-slider" min="0.1" max="1.0" value="0.8" step="0.05">
         </div>
 
         <div id="filtros-container" class="filtros-container">
@@ -192,11 +192,16 @@
     <div class="footer">Datos: Estudio Socioeconómico 2023 – RAUL VIQUEZ</div>
 
     <!-- ================================================================ -->
-    <!-- LIBRERÍAS - ORDEN CORRECTO -->
+    <!-- LIBRERÍAS - ORDEN CORRECTO Y DEFINITIVO -->
     <!-- ================================================================ -->
+    <!-- 1. Leaflet JS primero -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- 2. heatmap.js - DEBE ir ANTES que leaflet-heatmap -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.5/heatmap.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/leaflet-heatmap@1.0.0/leaflet-heatmap.min.js"></script>
+    
+    <!-- 3. leaflet-heatmap - DEBE ir DESPUÉS de heatmap.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-heatmap/1.1.0/leaflet-heatmap.min.js"></script>
     
     <script>
         // ================================================================
@@ -804,12 +809,12 @@
         }
 
         // ================================================================
-        // 10. CONFIGURACIÓN HEATMAP (SOLUCIÓN QUE FUNCIONA)
+        // 10. CONFIGURACIÓN HEATMAP
         // ================================================================
         function initHeatmapConfig() {
-            const radius = parseInt(document.getElementById('radius-slider').value) || 10;
-            const blur = parseInt(document.getElementById('blur-slider').value) || 10;
-            const opacity = parseFloat(document.getElementById('opacity-slider').value) || 0.7;
+            const radius = parseInt(document.getElementById('radius-slider').value) || 8;
+            const blur = parseInt(document.getElementById('blur-slider').value) || 8;
+            const opacity = parseFloat(document.getElementById('opacity-slider').value) || 0.8;
             
             heatmapConfig = {
                 radius: radius,
@@ -833,7 +838,7 @@
         }
 
         // ================================================================
-        // 11. ACTUALIZAR MAPA - CON HEATMAPOVERLAY FUNCIONAL
+        // 11. ACTUALIZAR MAPA
         // ================================================================
         function updateMap() {
             if (!geoJsonData) return;
@@ -858,7 +863,6 @@
                 featuresFiltradas.forEach(f => {
                     let val = parseFloat(f.properties[variable]);
                     
-                    // Convertir CAT_DENS a numérico
                     if (variable === 'CAT_DENS') {
                         const catOrder = { 'MUY_BAJA': 1, 'BAJA': 2, 'MEDIA': 3, 'ALTA': 4, 'MUY_ALTA': 5 };
                         val = catOrder[f.properties[variable]] || 0;
@@ -874,7 +878,7 @@
                             heatData.data.push({ lat: coords[1], lng: coords[0], count: val });
                         }
                     } catch (e) {
-                        // Si turf falla, calcular centroide manual
+                        // Fallback manual
                         try {
                             const geom = f.geometry;
                             if (geom && geom.type === 'Polygon') {
@@ -902,6 +906,14 @@
                 // Eliminar heatmap anterior
                 if (heatmapLayer && map.hasLayer(heatmapLayer)) {
                     map.removeLayer(heatmapLayer);
+                    heatmapLayer = null;
+                }
+
+                // Verificar que HeatmapOverlay existe
+                if (typeof HeatmapOverlay === 'undefined') {
+                    console.error('❌ HeatmapOverlay no está disponible');
+                    mostrarPoligonos(featuresFiltradas, variable);
+                    return;
                 }
 
                 // Configurar y crear nuevo heatmap
@@ -911,10 +923,9 @@
                     heatmapLayer = new HeatmapOverlay(heatmapConfig);
                     map.addLayer(heatmapLayer);
                     heatmapLayer.setData(heatData);
-                    console.log(`🔥 Heatmap generado: ${heatData.data.length} puntos, max=${heatData.max}`);
+                    console.log(`🔥 Heatmap generado: ${heatData.data.length} puntos`);
                 } catch (e) {
                     console.error('❌ Error al crear heatmap:', e);
-                    // Si falla, mostrar polígonos como fallback
                     mostrarPoligonos(featuresFiltradas, variable);
                     return;
                 }
@@ -1036,11 +1047,17 @@
         // 13. ACTUALIZAR HEATMAP (sliders)
         // ================================================================
         function actualizarHeatmap() {
-            if (!heatmapLayer || currentMode !== 'heatmap' || !heatmapDataCache) return;
+            if (!heatmapLayer || currentMode !== 'heatmap' || !heatmapDataCache) {
+                // Si no hay heatmap, recrearlo
+                if (currentMode === 'heatmap' && geoJsonData) {
+                    updateMap();
+                }
+                return;
+            }
             
-            const radius = parseInt(document.getElementById('radius-slider').value) || 10;
-            const blur = parseInt(document.getElementById('blur-slider').value) || 10;
-            const opacity = parseFloat(document.getElementById('opacity-slider').value) || 0.7;
+            const radius = parseInt(document.getElementById('radius-slider').value) || 8;
+            const blur = parseInt(document.getElementById('blur-slider').value) || 8;
+            const opacity = parseFloat(document.getElementById('opacity-slider').value) || 0.8;
             
             heatmapConfig.radius = radius;
             heatmapConfig.blur = blur;
@@ -1048,13 +1065,11 @@
             
             try {
                 if (heatmapLayer._heatmap) {
-                    // Actualizar configuración directamente
                     heatmapLayer._heatmap.configure({ 
                         radius: radius, 
                         blur: blur,
                         maxOpacity: opacity
                     });
-                    // Re-renderizar si es necesario
                     if (heatmapLayer._update) {
                         heatmapLayer._update();
                     }
@@ -1086,14 +1101,17 @@
         function verificarLibrerias() {
             console.log('=== VERIFICACIÓN DE LIBRERÍAS ===');
             console.log('HeatmapOverlay disponible:', typeof HeatmapOverlay);
+            console.log('h337 disponible (heatmap.js):', typeof h337);
             console.log('turf disponible:', typeof turf);
-            console.log('Chart disponible:', typeof Chart);
             
             if (typeof HeatmapOverlay === 'function') {
                 console.log('✅ HeatmapOverlay disponible correctamente');
             } else {
                 console.warn('⚠️ HeatmapOverlay NO está disponible');
-                console.log('Intentando cargar librerías manualmente...');
+                console.log('Verifica que las librerías se carguen en el orden correcto:');
+                console.log('  1. Leaflet JS');
+                console.log('  2. heatmap.js');
+                console.log('  3. leaflet-heatmap.js');
             }
         }
 
@@ -1159,6 +1177,7 @@
             document.getElementById('heatmap-controls').style.display = 'none';
             if (heatmapLayer && map.hasLayer(heatmapLayer)) {
                 map.removeLayer(heatmapLayer);
+                heatmapLayer = null;
             }
             updateMap();
         });
@@ -1191,19 +1210,19 @@
         radiusSlider.addEventListener('input', function(e) {
             radiusVal.innerText = e.target.value;
             clearTimeout(heatmapTimeout);
-            heatmapTimeout = setTimeout(() => actualizarHeatmap(), 100);
+            heatmapTimeout = setTimeout(() => actualizarHeatmap(), 150);
         });
 
         blurSlider.addEventListener('input', function(e) {
             blurVal.innerText = e.target.value;
             clearTimeout(heatmapTimeout);
-            heatmapTimeout = setTimeout(() => actualizarHeatmap(), 100);
+            heatmapTimeout = setTimeout(() => actualizarHeatmap(), 150);
         });
 
         opacitySlider.addEventListener('input', function(e) {
             opacityVal.innerText = e.target.value;
             clearTimeout(heatmapTimeout);
-            heatmapTimeout = setTimeout(() => actualizarHeatmap(), 100);
+            heatmapTimeout = setTimeout(() => actualizarHeatmap(), 150);
         });
 
         // Exponer funciones globales
@@ -1218,7 +1237,7 @@
         // 17. INICIO
         // ================================================================
         console.log('🗺️ Mapa de Manzanas iniciado – RAUL VIQUEZ');
-        console.log('📌 Usando HeatmapOverlay con parámetros ajustables');
+        console.log('📌 Usando HeatmapOverlay de leaflet-heatmap');
         
         verificarLibrerias();
         loadGeoJSON();
