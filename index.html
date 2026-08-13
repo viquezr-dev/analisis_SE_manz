@@ -806,23 +806,23 @@
         // ================================================================
         function updateMap() {
             if (!geoJsonData) return;
-
+        
             const variable = currentVariable;
             const featuresFiltradas = aplicarFiltros(allFeatures, variable);
             currentFeaturesFiltradas = featuresFiltradas;
-
+        
             document.getElementById('count-mostrados').textContent = featuresFiltradas.length;
             document.getElementById('count-total').textContent = allFeatures.length;
-
+        
             if (currentLayer) map.removeLayer(currentLayer);
-
+        
             // Modo Heatmap
             if (currentMode === 'heatmap') {
                 // Preparar datos para heatmap
                 const heatData = { max: 100, data: [] };
                 let maxVal = -Infinity;
                 let puntosValidos = 0;
-            
+        
                 featuresFiltradas.forEach(f => {
                     let val = parseFloat(f.properties[variable]);
                     
@@ -833,14 +833,13 @@
                     }
                     
                     if (isNaN(val) || val === null || val === 0) return;
-            
+        
                     try {
                         // Calcular centroide con turf
                         const centroid = turf.centroid(f);
                         const coords = centroid.geometry.coordinates;
                         
                         if (coords && coords.length === 2) {
-                            // Normalizar intensidad para el heatmap
                             const intensidad = val > 0 ? val : 0.1;
                             heatData.data.push({ 
                                 lat: coords[1], 
@@ -852,7 +851,7 @@
                             puntosValidos++;
                         }
                     } catch (e) {
-                        // Si falla turf, intentar calcular centroide manualmente
+                        // Si falla turf, calcular centroide manualmente
                         try {
                             const geom = f.geometry;
                             if (geom && geom.type === 'Polygon') {
@@ -881,7 +880,7 @@
                         }
                     }
                 });
-            
+        
                 heatData.max = maxVal === -Infinity ? 100 : maxVal;
                 
                 // Eliminar heatmap anterior
@@ -889,7 +888,7 @@
                     map.removeLayer(heatmapLayer);
                 }
                 
-                // Crear nuevo heatmap con configuración correcta
+                // Crear nuevo heatmap
                 if (!heatmapConfig) {
                     initHeatmap();
                 }
@@ -902,8 +901,8 @@
                 heatmapLayer.setData(heatData);
                 
                 console.log(`🔥 Heatmap generado: ${puntosValidos} puntos, max=${heatData.max}`);
-            
-                // Mostrar polígonos transparentes (para referencia)
+        
+                // Mostrar polígonos transparentes
                 currentLayer = L.geoJSON(geoJsonData, {
                     style: {
                         fillColor: 'transparent',
@@ -915,7 +914,7 @@
                         layer.bindPopup(crearPopup(feature.properties));
                     }
                 }).addTo(map);
-            
+        
                 // Leyenda
                 document.getElementById('legend').innerHTML = `
                     <div class="legend-title">🔥 Mapa de Calor</div>
@@ -926,40 +925,12 @@
                     </div>
                     <div class="legend-desc">💡 ${puntosValidos} puntos · ${variableLabels[variable] || variable}</div>
                 `;
-            
+        
                 document.getElementById('info-label').textContent = variableLabels[variable] || variable;
                 document.getElementById('info-value').textContent = `${puntosValidos} manzanas en calor`;
                 return;
             }
-
-                // Mostrar polígonos transparentes
-                currentLayer = L.geoJSON(geoJsonData, {
-                    style: {
-                        fillColor: 'transparent',
-                        fillOpacity: 0.01,
-                        color: 'rgba(255,255,255,0.3)',
-                        weight: 1
-                    },
-                    onEachFeature: function(feature, layer) {
-                        layer.bindPopup(crearPopup(feature.properties));
-                    }
-                }).addTo(map);
-
-                document.getElementById('legend').innerHTML = `
-                    <div class="legend-title">🔥 Mapa de Calor</div>
-                    <div class="gradient-bar"></div>
-                    <div class="gradient-labels">
-                        <span>Bajo (${heatData.data.length > 0 ? Math.min(...heatData.data.map(d => d.count)).toFixed(1) : 0})</span>
-                        <span>Alto (${heatData.max.toFixed(1)})</span>
-                    </div>
-                    <div class="legend-desc">💡 Intensidad: ${variableLabels[variable] || variable}</div>
-                `;
-
-                document.getElementById('info-label').textContent = variableLabels[variable] || variable;
-                document.getElementById('info-value').textContent = `${featuresFiltradas.length} manzanas en calor`;
-                return;
-            }
-
+        
             // Modo Polígonos
             currentLayer = L.geoJSON({
                 type: 'FeatureCollection',
@@ -999,7 +970,7 @@
                     });
                 }
             }).addTo(map);
-
+        
             updateLegend(variable, featuresFiltradas);
             document.getElementById('info-label').textContent = variableLabels[variable] || variable;
             document.getElementById('info-value').textContent = 'Clic en una manzana para detalles';
