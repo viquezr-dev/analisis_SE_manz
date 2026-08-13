@@ -265,23 +265,44 @@
         };
 
         // ================================================================
-        // 4. FUNCIONES DE RANGOS MEJORADAS
+        // VARIABLES DE CACHÉ PARA VIV_OCUP
         // ================================================================
-        function getRangoIndexVivOup(valor, features) {
-            if (isNaN(valor) || valor === null || valor === 0) return 0;
+        let vivOcupCache = null;
+        
+        function getVivOcupRangos(features) {
+            // Si ya tenemos los rangos en caché, devolverlos
+            if (vivOcupCache) {
+                return vivOcupCache;
+            }
             
+            // Extraer todos los valores de VIV_OCUP > 0
             const valores = features
                 .map(f => parseFloat(f.properties['VIV_OCUP']))
                 .filter(v => !isNaN(v) && v !== null && v > 0)
                 .sort((a, b) => a - b);
             
-            if (valores.length === 0) return 0;
+            if (valores.length === 0) {
+                vivOcupCache = { p20: 0, p40: 0, p60: 0, p80: 0, valores: [] };
+                return vivOcupCache;
+            }
             
             const total = valores.length;
             const p20 = valores[Math.floor(total * 0.20)];
             const p40 = valores[Math.floor(total * 0.40)];
             const p60 = valores[Math.floor(total * 0.60)];
             const p80 = valores[Math.floor(total * 0.80)];
+            
+            vivOcupCache = { p20, p40, p60, p80, valores };
+            return vivOcupCache;
+        }
+        
+        function getRangoIndexVivOup(valor, features) {
+            if (isNaN(valor) || valor === null || valor === 0) return 0;
+            
+            const rangos = getVivOcupRangos(features);
+            if (rangos.valores.length === 0) return 0;
+            
+            const { p20, p40, p60, p80 } = rangos;
             
             if (valor <= p20) return 0;
             if (valor <= p40) return 1;
@@ -289,23 +310,14 @@
             if (valor <= p80) return 3;
             return 4;
         }
-
+        
         function getColorVivOcup(valor, features) {
             if (isNaN(valor) || valor === null || valor === 0) return '#cccccc';
             
-            const valores = features
-                .map(f => parseFloat(f.properties['VIV_OCUP']))
-                .filter(v => !isNaN(v) && v !== null && v > 0)
-                .sort((a, b) => a - b);
+            const rangos = getVivOcupRangos(features);
+            if (rangos.valores.length === 0) return '#cccccc';
             
-            if (valores.length === 0) return '#cccccc';
-            
-            const total = valores.length;
-            const p20 = valores[Math.floor(total * 0.20)];
-            const p40 = valores[Math.floor(total * 0.40)];
-            const p60 = valores[Math.floor(total * 0.60)];
-            const p80 = valores[Math.floor(total * 0.80)];
-            
+            const { p20, p40, p60, p80 } = rangos;
             const colores = ['#e5f5e0', '#a1d99b', '#74c476', '#41ab5d', '#006d2c'];
             
             if (valor <= p20) return colores[0];
@@ -314,22 +326,14 @@
             if (valor <= p80) return colores[3];
             return colores[4];
         }
-
+        
         function obtenerNombresRangosVivOcup(features) {
-            const valores = features
-                .map(f => parseFloat(f.properties['VIV_OCUP']))
-                .filter(v => !isNaN(v) && v !== null && v > 0)
-                .sort((a, b) => a - b);
-            
-            if (valores.length === 0) {
+            const rangos = getVivOcupRangos(features);
+            if (rangos.valores.length === 0) {
                 return ['Muy bajo', 'Bajo', 'Medio', 'Alto', 'Muy alto'];
             }
             
-            const total = valores.length;
-            const p20 = valores[Math.floor(total * 0.20)];
-            const p40 = valores[Math.floor(total * 0.40)];
-            const p60 = valores[Math.floor(total * 0.60)];
-            const p80 = valores[Math.floor(total * 0.80)];
+            const { p20, p40, p60, p80 } = rangos;
             
             return [
                 `Muy bajo (0-${Math.round(p20)})`,
