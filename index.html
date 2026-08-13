@@ -865,7 +865,6 @@
                 if (rango > 0) {
                     for (const p of puntos) {
                         const normalizado = Math.max(0, Math.min(1, (p.intensity - p05) / rango));
-                        // Intensidad moderada: conserva diferencias sin saturar todo el mapa.
                         p.intensity = 0.15 + normalizado * 0.85;
                     }
                 } else {
@@ -881,13 +880,7 @@
         // ================================================================
         // 11. FUNCIÓN DE HEATMAP PERSONALIZADA (FALLBACK)
         // ================================================================
-        // Esta función crea un heatmap usando canvas directamente si L.heatLayer no está disponible
         function crearHeatmapFallback(puntos, map, radius, blur) {
-            // Crear un layer de canvas para el heatmap
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            // Crear un layer personalizado de Leaflet
             const HeatmapLayer = L.Layer.extend({
                 onAdd: function() {
                     const pane = this.getPane();
@@ -927,11 +920,9 @@
                     
                     ctx.clearRect(0, 0, size.x, size.y);
                     
-                    // Dibujar puntos con gradiente radial
                     const radiusPx = radius || 10;
                     const blurPx = blur || 5;
                     
-                    // Encontrar max intensity para normalizar
                     for (const p of puntos) {
                         const point = map.latLngToContainerPoint([p.lat, p.lng]);
                         const intensity = Math.max(0.15, Math.min(1, p.intensity));
@@ -941,7 +932,6 @@
                             point.x, point.y, radiusPx + blurPx
                         );
                         
-                        // Color según intensidad (azul -> cyan -> verde -> amarillo -> rojo)
                         const r = Math.min(255, Math.round(intensity * 255));
                         const g = Math.min(255, Math.round((1 - Math.abs(intensity - 0.5) * 2) * 255));
                         const b = Math.min(255, Math.round((1 - intensity) * 255));
@@ -1001,7 +991,6 @@
                     const radius = parseInt(document.getElementById('radius-slider').value) || 10;
                     const blur = parseInt(document.getElementById('blur-slider').value) || 5;
                     
-                    // Formato para leaflet-heatmap: [lat, lng, intensity]
                     const heatData = puntos.map(p => [p.lat, p.lng, p.intensity]);
                     
                     const heatConfig = {
@@ -1020,28 +1009,29 @@
                         }
                     };
         
-                    // Intentar usar L.heatLayer
                     if (typeof L.heatLayer === 'function') {
                         heatmapLayer = L.heatLayer(heatData, heatConfig).addTo(map);
                         console.log(`🔥 Heatmap generado con L.heatLayer: ${puntos.length} puntos`);
                     } else {
-                        // Fallback: usar canvas personalizado
                         console.warn('⚠️ L.heatLayer no disponible, usando fallback con canvas');
                         heatmapLayer = crearHeatmapFallback(puntos, map, radius, blur);
                         heatmapLayer.addTo(map);
                         console.log(`🔥 Heatmap generado con fallback: ${puntos.length} puntos`);
                     }
                     
-                    // Polígonos transparentes para interacción
+                    // ============================================================
+                    // ★ POLÍGONOS COMO LÍNEAS TENUES (SOLO EN MODO HEATMAP)
+                    // ============================================================
                     currentLayer = L.geoJSON({
                         type: 'FeatureCollection',
                         features: featuresFiltradas
                     }, {
                         style: {
-                            fillColor: 'transparent',
-                            fillOpacity: 0.01,
-                            color: 'rgba(255,255,255,0.2)',
-                            weight: 0.5
+                            fillColor: 'transparent',        // Sin relleno
+                            fillOpacity: 0,
+                            color: 'rgba(255,255,255,0.35)', // Línea blanca tenue
+                            weight: 1.2,
+                            opacity: 0.6
                         },
                         onEachFeature: function(feature, layer) {
                             layer.bindPopup(crearPopup(feature.properties));
