@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Estudio Socioeconómico - Manzanas 2023</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Turf.js -->
+    <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
+    
+    <!-- Heatmap.js + Plugin Leaflet -->
+    <script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/plugins/leaflet-heatmap/leaflet-heatmap.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; }
+        #map { height: 100vh; width: 100%; }
+
+        .control-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px 12px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            max-width: 270px;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            max-height: 95vh;
+            overflow-y: auto;
+            font-size: 11px;
+        }
+        .control-panel h3 {
+            font-size: 13px;
+            color: #1a2a3a;
+            border-bottom: 2px solid #d94f4f;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
+        }
+        .control-panel label {
+            font-weight: 600;
+            font-size: 10px;
+            color: #2c3e50;
+            display: block;
+            margin-top: 5px;
+            margin-bottom: 2px;
+        }
+        .control-panel select {
+            width: 100%;
+            padding: 3px 6px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            background: white;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        .control-panel select:focus {
+            outline: none;
+            border-color: #d94f4f;
+            box-shadow: 0 0 0 2px rgba(217, 79, 79, 0.2);
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 4px;
+            margin-top: 5px;
+        }
+        .mode-toggle button {
+            flex: 1;
+            padding: 4px 6px;
+            border: 1px solid #d94f4f;
+            background: white;
+            color: #d94f4f;
+            border-radius: 5px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mode-toggle button.active {
+            background: #d94f4f;
+            color: white;
+        }
+        .mode-toggle button:hover { opacity: 0.85; }
+
+        .search-container {
+            margin-top: 5px;
+            display: flex;
+            gap: 4px;
+        }
+        .search-container input {
+            flex: 1;
+            padding: 3px 6px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 10px;
+            outline: none;
+        }
+        .search-container input:focus {
+            border-color: #d94f4f;
+            box-shadow: 0 0 0 2px rgba(217, 79, 79, 0.2);
+        }
+        .search-container button {
+            padding: 3px 8px;
+            border-radius: 5px;
+            border: none;
+            background: #d94f4f;
+            color: white;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        .search-container button:hover { background: #b33a3a; }
+
+        .action-buttons {
+            display: flex;
+            gap: 4px;
+            margin-top: 5px;
+        }
+        .action-buttons button {
+            flex: 1;
+            padding: 3px 6px;
+            border-radius: 5px;
+            border: none;
+            font-size: 9px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .btn-export { background: #2a8b5e; color: white; }
+        .btn-export:hover { background: #1e6b47; }
+        .btn-stats { background: #2c6b9e; color: white; }
+        .btn-stats:hover { background: #1e4f7a; }
+        .btn-reset { background: #fee2e2; color: #991b1b; }
+        .btn-reset:hover { background: #fca5a5; }
+
+        .filtros-container {
+            margin-top: 5px;
+            padding: 5px 7px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 3px solid #d94f4f;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+        .filtros-container h4 {
+            font-size: 10px;
+            color: #1a2a3a;
+            margin-bottom: 3px;
+        }
+        .filtro-checkbox {
+            display: flex;
+            align-items: center;
+            margin: 2px 0;
+            font-size: 10px;
+            color: #2c3e50;
+            cursor: pointer;
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+        .filtro-checkbox:hover { background: #e9ecef; }
+        .filtro-checkbox input[type="checkbox"] {
+            margin-right: 5px;
+            width: 12px;
+            height: 12px;
+            accent-color: #d94f4f;
+            flex-shrink: 0;
+        }
+        .filtro-checkbox .color-muestra {
+            width: 14px;
+            height: 10px;
+            border-radius: 2px;
+            margin-right: 5px;
+            border: 1px solid rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+        .filtro-checkbox .count-badge {
+            margin-left: auto;
+            font-size: 8px;
+            background: #e9ecef;
+            padding: 0 5px;
+            border-radius: 8px;
+            color: #555;
+        }
+        .select-all-container {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 3px;
+        }
+        .select-all-container button {
+            font-size: 9px;
+            padding: 1px 6px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            background: white;
+            cursor: pointer;
+        }
+        .select-all-container button:hover { background: #e9ecef; }
+        .btn-reset-filtros {
+            background: #d94f4f;
+            color: white;
+            border: none;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            cursor: pointer;
+            margin-top: 3px;
+            width: 100%;
+            font-weight: 600;
+        }
+        .btn-reset-filtros:hover { background: #b33a3a; }
+
+        .info-box {
+            margin-top: 5px;
+            font-size: 10px;
+            color: #34495e;
+            background: #f8f9fa;
+            padding: 5px 7px;
+            border-radius: 5px;
+            border-left: 3px solid #d94f4f;
+            line-height: 1.4;
+        }
+        .info-box strong { color: #1a2a3a; }
+        .info-box .valor { font-weight: 700; color: #d94f4f; }
+        .info-box .stats {
+            font-size: 9px;
+            color: #666;
+            margin-top: 2px;
+            border-top: 1px dashed #ddd;
+            padding-top: 2px;
+        }
+        .info-box .stats span { font-weight: 700; color: #1a2a3a; }
+
+        .legend {
+            margin-top: 5px;
+            padding: 5px 7px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-size: 9px;
+        }
+        .legend-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 3px;
+            font-size: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 2px 0;
+        }
+        .legend-color {
+            width: 14px;
+            height: 10px;
+            border-radius: 2px;
+            margin-right: 5px;
+            border: 1px solid rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+        .legend-text { font-size: 9px; color: #2c3e50; }
+        .gradient-bar {
+            height: 10px;
+            width: 100%;
+            border-radius: 4px;
+            background: linear-gradient(to right, blue, cyan, lime, yellow, red);
+            margin-top: 4px;
+        }
+        .gradient-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            color: #555;
+        }
+        .legend-desc {
+            font-size: 8px;
+            color: #888;
+            margin-top: 3px;
+            padding-top: 3px;
+            border-top: 1px dashed #ddd;
+            font-style: italic;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(2px);
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .modal-content h3 {
+            font-size: 16px;
+            color: #1a2a3a;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #d94f4f;
+            padding-bottom: 6px;
+        }
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 22px;
+            cursor: pointer;
+            color: #888;
+            background: none;
+            border: none;
+        }
+        .modal-close:hover { color: #d94f4f; }
+        .modal-content canvas { max-height: 300px; max-width: 100%; }
+        .modal-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 12px;
+            font-size: 11px;
+        }
+        .modal-stats .stat-item {
+            background: #f8f9fa;
+            padding: 6px 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .modal-stats .stat-item .num { font-weight: 700; color: #d94f4f; font-size: 14px; }
+        .modal-stats .stat-item .label { color: #666; font-size: 9px; }
+
+        .heatmap-controls {
+            display: none;
+            margin-top: 5px;
+            padding-top: 5px;
+            border-top: 1px dashed #ccc;
+        }
+        .heatmap-controls label {
+            font-size: 9px;
+        }
+        .heatmap-controls input[type="range"] {
+            width: 100%;
+            accent-color: #d94f4f;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 3px 12px;
+            border-radius: 14px;
+            font-size: 9px;
+            backdrop-filter: blur(2px);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 600px) {
+            .control-panel {
+                top: 6px;
+                right: 6px;
+                max-width: 200px;
+                padding: 6px 8px;
+            }
+            .control-panel h3 { font-size: 11px; }
+            .control-panel select { font-size: 9px; padding: 2px 5px; }
+            .filtros-container { max-height: 120px; padding: 4px 5px; }
+            .filtro-checkbox { font-size: 9px; }
+            .legend { font-size: 8px; padding: 4px 5px; }
+            .info-box { font-size: 9px; padding: 4px 5px; }
+            .footer { font-size: 7px; padding: 2px 8px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <!-- Modal de Estadísticas -->
+    <div class="modal-overlay" id="statsModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeStats()">&times;</button>
+            <h3 id="statsTitle">📊 Estadísticas del indicador</h3>
+            <canvas id="statsChart"></canvas>
+            <div class="modal-stats" id="statsNumbers"></div>
+        </div>
+    </div>
+
+    <div class="control-panel">
+        <h3>📊 Manzanas - Análisis SE</h3>
+
+        <label for="map-select">🗺️ Mapa base:</label>
+        <select id="map-select">
+            <option value="satellite">🛰️ Satélite</option>
+            <option value="osm">🌍 OpenStreetMap</option>
+            <option value="topo">🗺️ Topográfico</option>
+        </select>
+
+        <label>📈 Modo:</label>
+        <div class="mode-toggle">
+            <button id="btn-polygon" class="active">🗺️ Polígonos</button>
+            <button id="btn-heatmap">🔥 Calor</button>
+        </div>
+
+        <label for="variable-select">📈 Indicador:</label>
+        <select id="variable-select">
+            <option value="CAT_DENS" selected>🏷️ Categoría de densidad</option>
+            <option value="DENS_POB">👥 Densidad poblacional</option>
+            <option value="VIV_OCUP">🏠 Viviendas ocupadas</option>
+            <option value="PORC_OCU">📊 % Ocupación</option>
+            <option value="PERS_X_VIV">👤 Pers./viv.</option>
+        </select>
+
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="🔍 Buscar código de manzana..." />
+            <button onclick="buscarManzana()">Buscar</button>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn-stats" onclick="mostrarEstadisticas()">📊 Estadísticas</button>
+            <button class="btn-export" onclick="exportarCSV()">💾 Exportar CSV</button>
+            <button class="btn-reset" onclick="resetFiltros()">🔄 Resetear</button>
+        </div>
+
+        <div id="heatmap-controls" class="heatmap-controls">
+            <label>Radio: <span id="radius-val">30</span>px</label>
+            <input type="range" id="radius-slider" min="10" max="80" value="30">
+            <label>Difuminado: <span id="blur-val">15</span>px</label>
+            <input type="range" id="blur-slider" min="5" max="40" value="15">
+        </div>
+
+        <div id="filtros-container" class="filtros-container">
+            <!-- Se llena con JS -->
+        </div>
+
+        <div class="info-box" id="info-box">
+            <strong id="info-label">Categoría de densidad</strong><br />
+            <span id="info-value">Selecciona una manzana</span>
+            <div class="stats" id="stats-info">Mostrando: <span id="count-mostrados">0</span> de <span id="count-total">0</span></div>
+        </div>
+
+        <div id="legend" class="legend">
+            <!-- Se llena con JS -->
+        </div>
+    </div>
+
+    <div class="footer">Datos: Estudio Socioeconómico 2023 – RAUL VIQUEZ</div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // ================================================================
+        // 1. MAPA Y CAPAS BASE
+        // ================================================================
+        const map = L.map('map', { center: [8.0, -80.0], zoom: 7 });
+
+        const satelliteLayer = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri',
+                maxZoom: 19
+            }
+        );
+
+        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19
+        });
+
+        const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenTopoMap',
+            maxZoom: 17
+        });
+
+        satelliteLayer.addTo(map);
+
+        // ================================================================
+        // 2. VARIABLES GLOBALES
+        // ================================================================
+        let currentLayer = null;
+        let currentVariable = 'CAT_DENS';
+        let geoJsonData = null;
+        let allFeatures = [];
+        let filtrosActivos = {};
+        let chartInstance = null;
+        let currentFeaturesFiltradas = [];
+        let currentMode = 'polygon';
+        let heatmapLayer = null;
+        let heatmapConfig = null;
+
+        // ================================================================
+        // 3. PALETAS DE COLORES
+        // ================================================================
+        const catColors = {
+            'MUY_BAJA': '#fcbba1',
+            'BAJA': '#fc9272',
+            'MEDIA': '#fb6a4a',
+            'ALTA': '#de2d26',
+            'MUY_ALTA': '#a50f15',
+            'SIN_DATOS': '#b0b0b0'
+        };
+
+        const catLabels = {
+            'MUY_BAJA': 'Muy baja (<100 hab/km²)',
+            'BAJA': 'Baja (100-500)',
+            'MEDIA': 'Media (500-1500)',
+            'ALTA': 'Alta (1500-5000)',
+            'MUY_ALTA': 'Muy alta (>5000)',
+            'SIN_DATOS': 'Sin datos'
+        };
+
+        const variableLabels = {
+            'CAT_DENS': 'Categoría de densidad',
+            'DENS_POB': 'Densidad poblacional (hab/km²)',
+            'VIV_OCUP': 'Viviendas ocupadas',
+            'PORC_OCU': '% Ocupación',
+            'PERS_X_VIV': 'Personas por vivienda'
+        };
+
+        const descripcionIndicador = {
+            'CAT_DENS': 'Clasificación según densidad poblacional.',
+            'DENS_POB': 'Habitantes por kilómetro cuadrado.',
+            'VIV_OCUP': 'Viviendas actualmente habitadas.',
+            'PORC_OCU': 'Porcentaje de viviendas ocupadas.',
+            'PERS_X_VIV': 'Promedio de personas por vivienda.'
+        };
+
+        function getColorByValue(variable, value) {
+            if (isNaN(value) || value === null || value === 0) return '#cccccc';
+            
+            if (variable === 'CAT_DENS') {
+                return catColors[value] || '#cccccc';
+            }
+            
+            if (variable === 'DENS_POB') {
+                if (value < 100) return '#fcbba1';
+                if (value < 500) return '#fc9272';
+                if (value < 1500) return '#fb6a4a';
+                if (value < 5000) return '#de2d26';
+                return '#a50f15';
+            }
+            
+            if (variable === 'VIV_OCUP') {
+                if (value < 1600) return '#a1d99b';
+                if (value < 3200) return '#74c476';
+                if (value < 4800) return '#41ab5d';
+                if (value < 6400) return '#238b45';
+                return '#005a32';
+            }
+            
+            if (variable === 'PORC_OCU') {
+                if (value < 20) return '#fdd0a2';
+                if (value < 40) return '#fdae6b';
+                if (value < 60) return '#f16913';
+                if (value < 80) return '#d94801';
+                return '#8c2d04';
+            }
+            
+            if (variable === 'PERS_X_VIV') {
+                if (value < 1.2) return '#bcbddc';
+                if (value < 2.4) return '#9e9ac8';
+                if (value < 3.6) return '#807dba';
+                if (value < 4.8) return '#6a51a3';
+                return '#4a1486';
+            }
+            
+            return '#cccccc';
+        }
+
+        function getRangoIndex(variable, value) {
+            if (isNaN(value) || value === null || value === 0) return 0;
+            
+            if (variable === 'DENS_POB') {
+                if (value < 100) return 0;
+                if (value < 500) return 1;
+                if (value < 1500) return 2;
+                if (value < 5000) return 3;
+                return 4;
+            }
+            
+            if (variable === 'VIV_OCUP') {
+                if (value < 1600) return 0;
+                if (value < 3200) return 1;
+                if (value < 4800) return 2;
+                if (value < 6400) return 3;
+                return 4;
+            }
+            
+            if (variable === 'PORC_OCU') {
+                if (value < 20) return 0;
+                if (value < 40) return 1;
+                if (value < 60) return 2;
+                if (value < 80) return 3;
+                return 4;
+            }
+            
+            if (variable === 'PERS_X_VIV') {
+                if (value < 1.2) return 0;
+                if (value < 2.4) return 1;
+                if (value < 3.6) return 2;
+                if (value < 4.8) return 3;
+                return 4;
+            }
+            
+            return 0;
+        }
+
+        function obtenerNombresRangos(variable) {
+            if (variable === 'DENS_POB') {
+                return ['Muy baja (<100)', 'Baja (100-500)', 'Media (500-1500)', 'Alta (1500-5000)', 'Muy alta (>5000)'];
+            }
+            if (variable === 'VIV_OCUP') {
+                return ['Muy bajo (0-1600)', 'Bajo (1600-3200)', 'Medio (3200-4800)', 'Alto (4800-6400)', 'Muy alto (6400-8000)'];
+            }
+            if (variable === 'PORC_OCU') {
+                return ['Muy bajo (0-20%)', 'Bajo (20-40%)', 'Medio (40-60%)', 'Alto (60-80%)', 'Muy alto (80-100%)'];
+            }
+            if (variable === 'PERS_X_VIV') {
+                return ['Muy bajo (0.0-1.2)', 'Bajo (1.2-2.4)', 'Medio (2.4-3.6)', 'Alto (3.6-4.8)', 'Muy alto (4.8-6.0)'];
+            }
+            return ['Muy bajo', 'Bajo', 'Medio', 'Alto', 'Muy alto'];
+        }
+
+        // ================================================================
+        // 4. FILTROS
+        // ================================================================
+        function getFiltros() {
+            const checkboxes = document.querySelectorAll('.filtro-checkbox input[type="checkbox"]');
+            const activos = {};
+            checkboxes.forEach(cb => { activos[cb.value] = cb.checked; });
+            return activos;
+        }
+
+        function aplicarFiltros(features, variable) {
+            const activos = getFiltros();
+            const algunActivo = Object.values(activos).some(v => v === true);
+            if (!algunActivo) return [];
+
+            return features.filter(f => {
+                let key;
+                if (variable === 'CAT_DENS') {
+                    key = f.properties[variable] || 'SIN_DATOS';
+                    return activos[key] !== false;
+                } else {
+                    const val = parseFloat(f.properties[variable]);
+                    if (isNaN(val) || val === null) return false;
+                    const index = getRangoIndex(variable, val);
+                    key = `rango_${index}`;
+                    return activos[key] !== false;
+                }
+            });
+        }
+
+        // ================================================================
+        // 5. CONSTRUIR FILTROS
+        // ================================================================
+        function construirFiltros(variable) {
+            const container = document.getElementById('filtros-container');
+            let html = '';
+            
+            if (variable === 'CAT_DENS') {
+                const items = ['MUY_BAJA', 'BAJA', 'MEDIA', 'ALTA', 'MUY_ALTA', 'SIN_DATOS'];
+                html = `<h4>🔍 Filtrar por categoría:</h4>
+                    <div class="select-all-container">
+                        <button onclick="toggleAllFiltros(true)">✅ Todo</button>
+                        <button onclick="toggleAllFiltros(false)">❌ Nada</button>
+                    </div>`;
+                for (const key of items) {
+                    const checked = filtrosActivos[key] !== false;
+                    html += `<label class="filtro-checkbox">
+                        <input type="checkbox" value="${key}" ${checked ? 'checked' : ''} />
+                        <span class="color-muestra" style="background:${catColors[key]};"></span>
+                        <span>${catLabels[key]}</span>
+                        <span class="count-badge" id="count-${key}">0</span>
+                    </label>`;
+                }
+            } else {
+                const nombresRangos = obtenerNombresRangos(variable);
+                html = `<h4>🔍 Filtrar por rango:</h4>
+                    <div class="select-all-container">
+                        <button onclick="toggleAllFiltros(true)">✅ Todo</button>
+                        <button onclick="toggleAllFiltros(false)">❌ Nada</button>
+                    </div>`;
+                for (let i = 0; i < nombresRangos.length; i++) {
+                    const key = `rango_${i}`;
+                    const checked = filtrosActivos[key] !== false;
+                    const color = getColorByValue(variable, i / (nombresRangos.length - 1));
+                    html += `<label class="filtro-checkbox">
+                        <input type="checkbox" value="${key}" ${checked ? 'checked' : ''} />
+                        <span class="color-muestra" style="background:${color};"></span>
+                        <span>${nombresRangos[i]}</span>
+                        <span class="count-badge" id="count-${key}">0</span>
+                    </label>`;
+                }
+            }
+            
+            html += `<button class="btn-reset-filtros" onclick="resetFiltros()">🔄 Restablecer filtros</button>`;
+            container.innerHTML = html;
+            
+            document.querySelectorAll('.filtro-checkbox input[type="checkbox"]').forEach(cb => {
+                cb.addEventListener('change', function() {
+                    filtrosActivos[this.value] = this.checked;
+                    updateMap();
+                });
+            });
+            
+            actualizarContadores();
+        }
+
+        function actualizarContadores() {
+            const variable = currentVariable;
+            
+            if (variable === 'CAT_DENS') {
+                const categories = ['MUY_BAJA', 'BAJA', 'MEDIA', 'ALTA', 'MUY_ALTA', 'SIN_DATOS'];
+                for (const cat of categories) {
+                    const count = allFeatures.filter(f => (f.properties['CAT_DENS'] || 'SIN_DATOS') === cat).length;
+                    const el = document.getElementById(`count-${cat}`);
+                    if (el) el.textContent = count;
+                }
+            } else {
+                const nombresRangos = obtenerNombresRangos(variable);
+                for (let i = 0; i < nombresRangos.length; i++) {
+                    const key = `rango_${i}`;
+                    const count = allFeatures.filter(f => {
+                        const val = parseFloat(f.properties[variable]);
+                        if (isNaN(val) || val === null) return false;
+                        const index = getRangoIndex(variable, val);
+                        return index === i;
+                    }).length;
+                    const el = document.getElementById(`count-${key}`);
+                    if (el) el.textContent = count;
+                }
+            }
+        }
+
+        function toggleAllFiltros(estado) {
+            const checkboxes = document.querySelectorAll('.filtro-checkbox input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = estado;
+                filtrosActivos[cb.value] = estado;
+            });
+            updateMap();
+        }
+
+        function resetFiltros() {
+            const checkboxes = document.querySelectorAll('.filtro-checkbox input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = true;
+                filtrosActivos[cb.value] = true;
+            });
+            document.getElementById('searchInput').value = '';
+            if (geoJsonData) {
+                const bounds = L.geoJSON(geoJsonData).getBounds();
+                if (bounds.isValid()) map.fitBounds(bounds, { padding: [20, 20] });
+            }
+            updateMap();
+        }
+
+        // ================================================================
+        // 6. BUSCADOR DE MANZANA
+        // ================================================================
+        function buscarManzana() {
+            const texto = document.getElementById('searchInput').value.trim();
+            if (!texto || !geoJsonData) return;
+
+            const encontrados = allFeatures.filter(f => {
+                const code = String(f.properties.MANZA_CODE || '');
+                return code.includes(texto);
+            });
+
+            if (encontrados.length === 0) {
+                alert('No se encontró la manzana: ' + texto);
+                return;
+            }
+
+            const geoJsonEncontrados = {
+                type: 'FeatureCollection',
+                features: encontrados
+            };
+
+            if (currentLayer) map.removeLayer(currentLayer);
+
+            currentLayer = L.geoJSON(geoJsonEncontrados, {
+                style: function(feature) {
+                    let value = feature.properties[currentVariable];
+                    let color = '#b0b0b0';
+                    if (currentVariable === 'CAT_DENS') {
+                        color = catColors[value] || '#b0b0b0';
+                    } else {
+                        const numVal = parseFloat(value);
+                        if (!isNaN(numVal) && numVal !== null) {
+                            color = getColorByValue(currentVariable, numVal);
+                        }
+                    }
+                    return { fillColor: color, weight: 2, opacity: 0.9, color: '#000000', fillOpacity: 0.85 };
+                },
+                onEachFeature: function(feature, layer) {
+                    const p = feature.properties;
+                    const areaM2 = p.AREA || 0;
+                    const areaKm2 = areaM2 / 1000000;
+                    layer.bindPopup(crearPopup(p));
+                }
+            }).addTo(map);
+
+            const bounds = L.geoJSON(geoJsonEncontrados).getBounds();
+            if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40] });
+            document.getElementById('count-mostrados').textContent = encontrados.length;
+            document.getElementById('count-total').textContent = allFeatures.length;
+            document.getElementById('info-value').textContent = `🔍 Resultados: ${encontrados.length} manzanas`;
+        }
+
+        // ================================================================
+        // 7. POPUP
+        // ================================================================
+        function crearPopup(p) {
+            const areaM2 = p.AREA || 0;
+            const areaKm2 = areaM2 / 1000000;
+            const manzaCode = p.MANZA_CODE || '';
+            
+            return `<div style="font-family:'Segoe UI',sans-serif;min-width:170px;max-width:240px;font-size:11px;">
+                <h4 style="margin:0 0 2px 0;color:#1a2a3a;font-size:12px;">
+                    🏠 Manzana: ${manzaCode}
+                </h4>
+                <hr style="margin:3px 0;border:0;border-top:1px solid #ddd;">
+                <table style="width:100%;font-size:10px;line-height:1.4;">
+                    <tr><td><strong>Viviendas:</strong></td><td>${p.VIVIENDA || 0}</td></tr>
+                    <tr><td><strong>Personas:</strong></td><td>${p.V_PERSONAS || 0}</td></tr>
+                    <tr><td><strong>Ocupadas:</strong></td><td>${p.VIV_OCUP || 0}</td></tr>
+                    <tr><td><strong>% Ocupación:</strong></td><td>${p.PORC_OCU ? p.PORC_OCU.toFixed(1) : 0}%</td></tr>
+                    <tr><td><strong>Densidad:</strong></td><td>${p.DENS_POB ? p.DENS_POB.toFixed(1) : 0} hab/km²</td></tr>
+                    <tr><td><strong>Pers./viv.:</strong></td><td>${p.PERS_X_VIV ? p.PERS_X_VIV.toFixed(2) : 0}</td></tr>
+                    <tr><td><strong>Categoría:</strong></td><td>${p.CAT_DENS || 'Sin datos'}</td></tr>
+                    <tr><td><strong>Área:</strong></td><td>${areaKm2.toFixed(2)} km² (${areaM2.toFixed(0)} m²)</td></tr>
+                </table>
+            </div>`;
+        }
+
+        // ================================================================
+        // 8. EXPORTAR CSV
+        // ================================================================
+        function exportarCSV() {
+            if (!geoJsonData || allFeatures.length === 0) {
+                alert('No hay datos para exportar');
+                return;
+            }
+
+            const features = currentFeaturesFiltradas.length > 0 ? currentFeaturesFiltradas : allFeatures;
+            const headers = ['MANZA_CODE', 'VIVIENDA', 'V_PERSONAS', 'VIV_OCUP', 'PORC_OCU', 'DENS_POB', 'PERS_X_VIV', 'CAT_DENS', 'AREA_KM2'];
+
+            const rows = features.map(f => {
+                const p = f.properties;
+                return [
+                    p.MANZA_CODE || '',
+                    p.VIVIENDA || 0,
+                    p.V_PERSONAS || 0,
+                    p.VIV_OCUP || 0,
+                    p.PORC_OCU ? p.PORC_OCU.toFixed(1) : 0,
+                    p.DENS_POB ? p.DENS_POB.toFixed(1) : 0,
+                    p.PERS_X_VIV ? p.PERS_X_VIV.toFixed(2) : 0,
+                    p.CAT_DENS || '',
+                    ((p.AREA || 0) / 1000000).toFixed(4)
+                ];
+            });
+
+            let csv = headers.join(',') + '\n';
+            rows.forEach(row => { csv += row.join(',') + '\n'; });
+
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `manzanas_${currentVariable}.csv`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        // ================================================================
+        // 9. ESTADÍSTICAS
+        // ================================================================
+        function mostrarEstadisticas() {
+            document.getElementById('statsModal').classList.add('active');
+            const features = currentFeaturesFiltradas.length > 0 ? currentFeaturesFiltradas : allFeatures;
+            const variable = currentVariable;
+            document.getElementById('statsTitle').textContent = `📊 Estadísticas: ${variableLabels[variable] || variable}`;
+
+            let labels = [], data = [], colors = [];
+
+            if (variable === 'CAT_DENS') {
+                const categories = ['MUY_BAJA', 'BAJA', 'MEDIA', 'ALTA', 'MUY_ALTA', 'SIN_DATOS'];
+                const counts = {};
+                categories.forEach(c => counts[c] = 0);
+                features.forEach(f => {
+                    const cat = f.properties[variable] || 'SIN_DATOS';
+                    counts[cat] = (counts[cat] || 0) + 1;
+                });
+                labels = categories.map(c => catLabels[c] || c);
+                data = categories.map(c => counts[c] || 0);
+                colors = categories.map(c => catColors[c] || '#b0b0b0');
+            } else {
+                const valores = features.map(f => parseFloat(f.properties[variable])).filter(v => !isNaN(v) && v !== null);
+                if (valores.length > 0) {
+                    const min = Math.min(...valores), max = Math.max(...valores);
+                    const steps = 5, step = (max - min) / steps;
+                    const counts = new Array(steps).fill(0);
+                    valores.forEach(v => {
+                        const idx = Math.min(Math.floor((v - min) / step), steps - 1);
+                        counts[idx]++;
+                    });
+                    labels = counts.map((_, i) => `${(min + i * step).toFixed(1)}-${(min + (i + 1) * step).toFixed(1)}`);
+                    data = counts;
+                    colors = ['#a1d99b', '#74c476', '#41ab5d', '#238b45', '#005a32'];
+                }
+            }
+
+            const statsDiv = document.getElementById('statsNumbers');
+            let statsHTML = '';
+            if (variable !== 'CAT_DENS') {
+                const valores = features.map(f => parseFloat(f.properties[variable])).filter(v => !isNaN(v) && v !== null);
+                if (valores.length > 0) {
+                    const sum = valores.reduce((a, b) => a + b, 0);
+                    const mean = sum / valores.length;
+                    const sorted = [...valores].sort((a, b) => a - b);
+                    const median = sorted.length % 2 === 0 ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2 :
+                        sorted[Math.floor(sorted.length / 2)];
+                    statsHTML = `
+                        <div class="stat-item"><span class="num">${valores.length}</span><div class="label">Registros</div></div>
+                        <div class="stat-item"><span class="num">${mean.toFixed(2)}</span><div class="label">Promedio</div></div>
+                        <div class="stat-item"><span class="num">${median.toFixed(2)}</span><div class="label">Mediana</div></div>
+                        <div class="stat-item"><span class="num">${sorted[0].toFixed(2)} - ${sorted[sorted.length-1].toFixed(2)}</span><div class="label">Mín - Máx</div></div>
+                    `;
+                }
+            } else {
+                const total = data.reduce((a, b) => a + b, 0);
+                statsHTML = `
+                    <div class="stat-item"><span class="num">${total}</span><div class="label">Total manzanas</div></div>
+                    <div class="stat-item"><span class="num">${data.filter(d => d > 0).length}</span><div class="label">Categorías con datos</div></div>
+                `;
+            }
+            statsDiv.innerHTML = statsHTML;
+
+            if (chartInstance) chartInstance.destroy();
+            const ctx = document.getElementById('statsChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: labels, datasets: [{ label: 'Manzanas', data: data, backgroundColor: colors, borderWidth: 1 }] },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { font: { size: 9 } } },
+                        x: { ticks: { font: { size: 8 }, maxRotation: 30 } } }
+                }
+            });
+        }
+
+        function closeStats() {
+            document.getElementById('statsModal').classList.remove('active');
+            if (chartInstance) { chartInstance.destroy();
+                chartInstance = null; }
+        }
+
+        // ================================================================
+        // 10. ACTUALIZAR MAPA
+        // ================================================================
+        function updateMap() {
+            if (!geoJsonData) return;
+
+            const variable = currentVariable;
+            const featuresFiltradas = aplicarFiltros(allFeatures, variable);
+            currentFeaturesFiltradas = featuresFiltradas;
+
+            document.getElementById('count-mostrados').textContent = featuresFiltradas.length;
+            document.getElementById('count-total').textContent = allFeatures.length;
+
+            if (currentLayer) map.removeLayer(currentLayer);
+
+            // Modo Heatmap
+            if (currentMode === 'heatmap') {
+                // Preparar datos para heatmap
+                const heatData = { max: 100, data: [] };
+                let maxVal = -Infinity;
+
+                featuresFiltradas.forEach(f => {
+                    let val = parseFloat(f.properties[variable]);
+                    if (variable === 'CAT_DENS') {
+                        const catOrder = { 'MUY_BAJA': 1, 'BAJA': 2, 'MEDIA': 3, 'ALTA': 4, 'MUY_ALTA': 5 };
+                        val = catOrder[f.properties[variable]] || 0;
+                    }
+                    if (isNaN(val) || val === null) return;
+
+                    try {
+                        const centroid = turf.centroid(f);
+                        const coords = centroid.geometry.coordinates;
+                        if (val > maxVal) maxVal = val;
+                        heatData.data.push({ lat: coords[1], lng: coords[0], count: val });
+                    } catch (e) {}
+                });
+
+                heatData.max = maxVal === -Infinity ? 100 : maxVal;
+                
+                if (map.hasLayer(heatmapLayer)) map.removeLayer(heatmapLayer);
+                heatmapLayer = new HeatmapOverlay(heatmapConfig);
+                map.addLayer(heatmapLayer);
+                heatmapLayer.setData(heatData);
+
+                // Mostrar polígonos transparentes
+                currentLayer = L.geoJSON(geoJsonData, {
+                    style: {
+                        fillColor: 'transparent',
+                        fillOpacity: 0.01,
+                        color: 'rgba(255,255,255,0.3)',
+                        weight: 1
+                    },
+                    onEachFeature: function(feature, layer) {
+                        layer.bindPopup(crearPopup(feature.properties));
+                    }
+                }).addTo(map);
+
+                document.getElementById('legend').innerHTML = `
+                    <div class="legend-title">🔥 Mapa de Calor</div>
+                    <div class="gradient-bar"></div>
+                    <div class="gradient-labels">
+                        <span>Bajo (${heatData.data.length > 0 ? Math.min(...heatData.data.map(d => d.count)).toFixed(1) : 0})</span>
+                        <span>Alto (${heatData.max.toFixed(1)})</span>
+                    </div>
+                    <div class="legend-desc">💡 Intensidad: ${variableLabels[variable] || variable}</div>
+                `;
+
+                document.getElementById('info-label').textContent = variableLabels[variable] || variable;
+                document.getElementById('info-value').textContent = `${featuresFiltradas.length} manzanas en calor`;
+                return;
+            }
+
+            // Modo Polígonos
+            currentLayer = L.geoJSON({
+                type: 'FeatureCollection',
+                features: featuresFiltradas
+            }, {
+                style: function(feature) {
+                    let value = feature.properties[variable];
+                    let color = '#cccccc';
+                    if (variable === 'CAT_DENS') {
+                        color = catColors[value] || '#cccccc';
+                    } else {
+                        const numVal = parseFloat(value);
+                        if (!isNaN(numVal) && numVal !== null) {
+                            color = getColorByValue(variable, numVal);
+                        }
+                    }
+                    return { fillColor: color, weight: 1, opacity: 0.8, color: '#333333', fillOpacity: 0.8 };
+                },
+                onEachFeature: function(feature, layer) {
+                    layer.bindPopup(crearPopup(feature.properties));
+                    layer.on('mouseover', function() {
+                        this.setStyle({ weight: 2.5, color: '#000000', fillOpacity: 0.95 });
+                        this.bringToFront();
+                    });
+                    layer.on('mouseout', function() {
+                        const value = this.feature.properties[variable];
+                        let color = '#cccccc';
+                        if (variable === 'CAT_DENS') {
+                            color = catColors[value] || '#cccccc';
+                        } else {
+                            const numVal = parseFloat(value);
+                            if (!isNaN(numVal) && numVal !== null) {
+                                color = getColorByValue(variable, numVal);
+                            }
+                        }
+                        this.setStyle({ weight: 1, color: '#333333', fillColor: color, fillOpacity: 0.8 });
+                    });
+                }
+            }).addTo(map);
+
+            updateLegend(variable, featuresFiltradas);
+            document.getElementById('info-label').textContent = variableLabels[variable] || variable;
+            document.getElementById('info-value').textContent = 'Clic en una manzana para detalles';
+        }
+
+        // ================================================================
+        // 11. LEYENDA
+        // ================================================================
+        function updateLegend(variable, features) {
+            const legendDiv = document.getElementById('legend');
+            let html = `<div class="legend-title">Leyenda</div>`;
+
+            if (variable === 'CAT_DENS') {
+                const categories = ['MUY_BAJA', 'BAJA', 'MEDIA', 'ALTA', 'MUY_ALTA', 'SIN_DATOS'];
+                for (const cat of categories) {
+                    html += `<div class="legend-item">
+                        <div class="legend-color" style="background:${catColors[cat]};"></div>
+                        <span class="legend-text">${catLabels[cat]}</span>
+                    </div>`;
+                }
+            } else {
+                const nombresRangos = obtenerNombresRangos(variable);
+                for (let i = 0; i < nombresRangos.length; i++) {
+                    const color = getColorByValue(variable, i / (nombresRangos.length - 1));
+                    html += `<div class="legend-item">
+                        <div class="legend-color" style="background:${color};"></div>
+                        <span class="legend-text">${nombresRangos[i]}</span>
+                    </div>`;
+                }
+            }
+
+            const desc = descripcionIndicador[variable] || '';
+            if (desc) html += `<div class="legend-desc">💡 ${desc}</div>`;
+            legendDiv.innerHTML = html;
+        }
+
+        // ================================================================
+        // 12. INICIALIZAR HEATMAP
+        // ================================================================
+        function initHeatmap() {
+            if (typeof HeatmapOverlay === 'undefined') {
+                console.warn('⚠️ HeatmapOverlay no disponible');
+                return;
+            }
+            
+            heatmapConfig = {
+                radius: 30,
+                maxOpacity: 0.8,
+                minOpacity: 0.05,
+                blur: 0.375,
+                scaleRadius: false,
+                useLocalExtrema: false,
+                latField: 'lat',
+                lngField: 'lng',
+                valueField: 'count'
+            };
+            
+            heatmapLayer = new HeatmapOverlay(heatmapConfig);
+            console.log('✅ Heatmap inicializado');
+        }
+
+        // ================================================================
+        // 13. CARGA DEL GEOJSON
+        // ================================================================
+        async function loadGeoJSON() {
+            try {
+                const response = await fetch('manzanas.geojson');
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const data = await response.json();
+                geoJsonData = data;
+                allFeatures = data.features;
+                console.log('✅ GeoJSON cargado:', allFeatures.length, 'features');
+
+                const categories = ['MUY_BAJA', 'BAJA', 'MEDIA', 'ALTA', 'MUY_ALTA', 'SIN_DATOS'];
+                for (const cat of categories) filtrosActivos[cat] = true;
+                for (let i = 0; i < 5; i++) filtrosActivos[`rango_${i}`] = true;
+
+                const variable = document.getElementById('variable-select').value;
+                currentVariable = variable;
+                construirFiltros(variable);
+                updateMap();
+
+                const bounds = L.geoJSON(data).getBounds();
+                if (bounds.isValid()) map.fitBounds(bounds, { padding: [20, 20] });
+            } catch (error) {
+                console.error('❌ Error:', error);
+                document.getElementById('info-box').innerHTML = `
+                    <div style="color:#b94a4a;font-weight:bold;">⚠️ Error al cargar los datos</div>
+                    <div style="font-size:10px;margin-top:2px;">${error.message}</div>
+                    <div style="font-size:10px;margin-top:2px;">Asegúrate de que <strong>manzanas.geojson</strong> esté en la misma carpeta.</div>
+                `;
+            }
+        }
+
+        // ================================================================
+        // 14. EVENTOS
+        // ================================================================
+        document.getElementById('variable-select').addEventListener('change', function(e) {
+            currentVariable = e.target.value;
+            document.getElementById('searchInput').value = '';
+            construirFiltros(currentVariable);
+            updateMap();
+        });
+
+        document.getElementById('map-select').addEventListener('change', function(e) {
+            const value = e.target.value;
+            map.removeLayer(satelliteLayer);
+            map.removeLayer(osmLayer);
+            map.removeLayer(topoLayer);
+            if (value === 'satellite') satelliteLayer.addTo(map);
+            else if (value === 'osm') osmLayer.addTo(map);
+            else if (value === 'topo') topoLayer.addTo(map);
+        });
+
+        document.getElementById('btn-polygon').addEventListener('click', function() {
+            currentMode = 'polygon';
+            this.classList.add('active');
+            document.getElementById('btn-heatmap').classList.remove('active');
+            document.getElementById('heatmap-controls').style.display = 'none';
+            if (heatmapLayer) map.removeLayer(heatmapLayer);
+            updateMap();
+        });
+
+        document.getElementById('btn-heatmap').addEventListener('click', function() {
+            currentMode = 'heatmap';
+            this.classList.add('active');
+            document.getElementById('btn-polygon').classList.remove('active');
+            document.getElementById('heatmap-controls').style.display = 'block';
+            updateMap();
+        });
+
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') buscarManzana();
+        });
+
+        document.getElementById('statsModal').addEventListener('click', function(e) {
+            if (e.target === this) closeStats();
+        });
+
+        // Controles de heatmap
+        document.getElementById('radius-slider').addEventListener('input', function(e) {
+            document.getElementById('radius-val').innerText = e.target.value;
+            if (heatmapConfig) {
+                heatmapConfig.radius = parseInt(e.target.value);
+                if (heatmapLayer) {
+                    heatmapLayer.configure(heatmapConfig);
+                    heatmapLayer._update();
+                }
+            }
+        });
+
+        document.getElementById('blur-slider').addEventListener('input', function(e) {
+            document.getElementById('blur-val').innerText = e.target.value;
+            if (heatmapConfig) {
+                heatmapConfig.blur = parseFloat(e.target.value) / 40;
+                if (heatmapLayer) {
+                    heatmapLayer.configure(heatmapConfig);
+                    heatmapLayer._update();
+                }
+            }
+        });
+
+        window.toggleAllFiltros = toggleAllFiltros;
+        window.resetFiltros = resetFiltros;
+        window.buscarManzana = buscarManzana;
+        window.exportarCSV = exportarCSV;
+        window.mostrarEstadisticas = mostrarEstadisticas;
+        window.closeStats = closeStats;
+
+        // ================================================================
+        // 15. INICIO
+        // ================================================================
+        initHeatmap();
+        loadGeoJSON();
+        console.log('🗺️ Mapa de Manzanas iniciado – RAUL VIQUEZ');
+    </script>
+
+</body>
+</html>
