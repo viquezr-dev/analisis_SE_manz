@@ -5,16 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Estudio Socioeconómico - Manzanas 2023</title>
     
-    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    
-    <!-- Turf.js -->
     <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
-    
-    <!-- Heatmap.js + Plugin Leaflet -->
     <script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/plugins/leaflet-heatmap/leaflet-heatmap.js"></script>
     
@@ -28,113 +21,34 @@
             top: 10px;
             right: 10px;
             z-index: 1000;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255,255,255,0.95);
             padding: 10px 12px;
             border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             max-width: 270px;
             backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255,255,255,0.3);
             max-height: 95vh;
             overflow-y: auto;
             font-size: 11px;
         }
-        .control-panel h3 {
-            font-size: 13px;
-            color: #1a2a3a;
-            border-bottom: 2px solid #d94f4f;
-            padding-bottom: 4px;
-            margin-bottom: 6px;
-        }
-        .control-panel label {
-            font-weight: 600;
-            font-size: 10px;
-            color: #2c3e50;
-            display: block;
-            margin-top: 5px;
-            margin-bottom: 2px;
-        }
-        .control-panel select {
-            width: 100%;
-            padding: 3px 6px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            background: white;
-            font-size: 10px;
-            cursor: pointer;
-        }
-        .control-panel select:focus {
-            outline: none;
-            border-color: #d94f4f;
-            box-shadow: 0 0 0 2px rgba(217, 79, 79, 0.2);
-        }
+        .control-panel h3 { font-size: 13px; color: #1a2a3a; border-bottom: 2px solid #d94f4f; padding-bottom: 4px; margin-bottom: 6px; }
+        .control-panel label { font-weight: 600; font-size: 10px; color: #2c3e50; display: block; margin-top: 5px; margin-bottom: 2px; }
+        .control-panel select { width: 100%; padding: 3px 6px; border-radius: 5px; border: 1px solid #ccc; background: white; font-size: 10px; cursor: pointer; }
+        .control-panel select:focus { outline: none; border-color: #d94f4f; box-shadow: 0 0 0 2px rgba(217,79,79,0.2); }
 
-        .mode-toggle {
-            display: flex;
-            gap: 4px;
-            margin-top: 5px;
-        }
-        .mode-toggle button {
-            flex: 1;
-            padding: 4px 6px;
-            border: 1px solid #d94f4f;
-            background: white;
-            color: #d94f4f;
-            border-radius: 5px;
-            font-size: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .mode-toggle button.active {
-            background: #d94f4f;
-            color: white;
-        }
-        .mode-toggle button:hover { opacity: 0.85; }
+        .mode-toggle { display: flex; gap: 4px; margin-top: 5px; }
+        .mode-toggle button { flex: 1; padding: 4px 6px; border: 1px solid #d94f4f; background: white; color: #d94f4f; border-radius: 5px; font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .mode-toggle button.active { background: #d94f4f; color: white; }
 
-        .search-container {
-            margin-top: 5px;
-            display: flex;
-            gap: 4px;
-        }
-        .search-container input {
-            flex: 1;
-            padding: 3px 6px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            font-size: 10px;
-            outline: none;
-        }
-        .search-container input:focus {
-            border-color: #d94f4f;
-            box-shadow: 0 0 0 2px rgba(217, 79, 79, 0.2);
-        }
-        .search-container button {
-            padding: 3px 8px;
-            border-radius: 5px;
-            border: none;
-            background: #d94f4f;
-            color: white;
-            font-size: 10px;
-            cursor: pointer;
-        }
+        .search-container { margin-top: 5px; display: flex; gap: 4px; }
+        .search-container input { flex: 1; padding: 3px 6px; border-radius: 5px; border: 1px solid #ccc; font-size: 10px; outline: none; }
+        .search-container input:focus { border-color: #d94f4f; box-shadow: 0 0 0 2px rgba(217,79,79,0.2); }
+        .search-container button { padding: 3px 8px; border-radius: 5px; border: none; background: #d94f4f; color: white; font-size: 10px; cursor: pointer; }
         .search-container button:hover { background: #b33a3a; }
 
-        .action-buttons {
-            display: flex;
-            gap: 4px;
-            margin-top: 5px;
-        }
-        .action-buttons button {
-            flex: 1;
-            padding: 3px 6px;
-            border-radius: 5px;
-            border: none;
-            font-size: 9px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background 0.2s;
-        }
+        .action-buttons { display: flex; gap: 4px; margin-top: 5px; }
+        .action-buttons button { flex: 1; padding: 3px 6px; border-radius: 5px; border: none; font-size: 9px; cursor: pointer; font-weight: 600; transition: background 0.2s; }
         .btn-export { background: #2a8b5e; color: white; }
         .btn-export:hover { background: #1e6b47; }
         .btn-stats { background: #2c6b9e; color: white; }
@@ -142,246 +56,53 @@
         .btn-reset { background: #fee2e2; color: #991b1b; }
         .btn-reset:hover { background: #fca5a5; }
 
-        .filtros-container {
-            margin-top: 5px;
-            padding: 5px 7px;
-            background: #f8f9fa;
-            border-radius: 5px;
-            border-left: 3px solid #d94f4f;
-            max-height: 160px;
-            overflow-y: auto;
-        }
-        .filtros-container h4 {
-            font-size: 10px;
-            color: #1a2a3a;
-            margin-bottom: 3px;
-        }
-        .filtro-checkbox {
-            display: flex;
-            align-items: center;
-            margin: 2px 0;
-            font-size: 10px;
-            color: #2c3e50;
-            cursor: pointer;
-            padding: 1px 4px;
-            border-radius: 3px;
-        }
+        .filtros-container { margin-top: 5px; padding: 5px 7px; background: #f8f9fa; border-radius: 5px; border-left: 3px solid #d94f4f; max-height: 160px; overflow-y: auto; }
+        .filtros-container h4 { font-size: 10px; color: #1a2a3a; margin-bottom: 3px; }
+        .filtro-checkbox { display: flex; align-items: center; margin: 2px 0; font-size: 10px; color: #2c3e50; cursor: pointer; padding: 1px 4px; border-radius: 3px; }
         .filtro-checkbox:hover { background: #e9ecef; }
-        .filtro-checkbox input[type="checkbox"] {
-            margin-right: 5px;
-            width: 12px;
-            height: 12px;
-            accent-color: #d94f4f;
-            flex-shrink: 0;
-        }
-        .filtro-checkbox .color-muestra {
-            width: 14px;
-            height: 10px;
-            border-radius: 2px;
-            margin-right: 5px;
-            border: 1px solid rgba(0,0,0,0.1);
-            flex-shrink: 0;
-        }
-        .filtro-checkbox .count-badge {
-            margin-left: auto;
-            font-size: 8px;
-            background: #e9ecef;
-            padding: 0 5px;
-            border-radius: 8px;
-            color: #555;
-        }
-        .select-all-container {
-            display: flex;
-            gap: 4px;
-            margin-bottom: 3px;
-        }
-        .select-all-container button {
-            font-size: 9px;
-            padding: 1px 6px;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            background: white;
-            cursor: pointer;
-        }
+        .filtro-checkbox input[type="checkbox"] { margin-right: 5px; width: 12px; height: 12px; accent-color: #d94f4f; flex-shrink: 0; }
+        .filtro-checkbox .color-muestra { width: 14px; height: 10px; border-radius: 2px; margin-right: 5px; border: 1px solid rgba(0,0,0,0.1); flex-shrink: 0; }
+        .filtro-checkbox .count-badge { margin-left: auto; font-size: 8px; background: #e9ecef; padding: 0 5px; border-radius: 8px; color: #555; }
+        .select-all-container { display: flex; gap: 4px; margin-bottom: 3px; }
+        .select-all-container button { font-size: 9px; padding: 1px 6px; border: 1px solid #ccc; border-radius: 3px; background: white; cursor: pointer; }
         .select-all-container button:hover { background: #e9ecef; }
-        .btn-reset-filtros {
-            background: #d94f4f;
-            color: white;
-            border: none;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 9px;
-            cursor: pointer;
-            margin-top: 3px;
-            width: 100%;
-            font-weight: 600;
-        }
+        .btn-reset-filtros { background: #d94f4f; color: white; border: none; padding: 2px 8px; border-radius: 4px; font-size: 9px; cursor: pointer; margin-top: 3px; width: 100%; font-weight: 600; }
         .btn-reset-filtros:hover { background: #b33a3a; }
 
-        .info-box {
-            margin-top: 5px;
-            font-size: 10px;
-            color: #34495e;
-            background: #f8f9fa;
-            padding: 5px 7px;
-            border-radius: 5px;
-            border-left: 3px solid #d94f4f;
-            line-height: 1.4;
-        }
+        .info-box { margin-top: 5px; font-size: 10px; color: #34495e; background: #f8f9fa; padding: 5px 7px; border-radius: 5px; border-left: 3px solid #d94f4f; line-height: 1.4; }
         .info-box strong { color: #1a2a3a; }
         .info-box .valor { font-weight: 700; color: #d94f4f; }
-        .info-box .stats {
-            font-size: 9px;
-            color: #666;
-            margin-top: 2px;
-            border-top: 1px dashed #ddd;
-            padding-top: 2px;
-        }
-        .info-box .stats span { font-weight: 700; color: #1a2a3a; }
+        .info-box .stats { font-size: 9px; color: #666; margin-top: 2px; border-top: 1px dashed #ddd; padding-top: 2px; }
 
-        .legend {
-            margin-top: 5px;
-            padding: 5px 7px;
-            background: #f8f9fa;
-            border-radius: 5px;
-            font-size: 9px;
-        }
-        .legend-title {
-            font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 3px;
-            font-size: 10px;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin: 2px 0;
-        }
-        .legend-color {
-            width: 14px;
-            height: 10px;
-            border-radius: 2px;
-            margin-right: 5px;
-            border: 1px solid rgba(0,0,0,0.1);
-            flex-shrink: 0;
-        }
+        .legend { margin-top: 5px; padding: 5px 7px; background: #f8f9fa; border-radius: 5px; font-size: 9px; }
+        .legend-title { font-weight: 600; color: #2c3e50; margin-bottom: 3px; font-size: 10px; }
+        .legend-item { display: flex; align-items: center; margin: 2px 0; }
+        .legend-color { width: 14px; height: 10px; border-radius: 2px; margin-right: 5px; border: 1px solid rgba(0,0,0,0.1); flex-shrink: 0; }
         .legend-text { font-size: 9px; color: #2c3e50; }
-        .gradient-bar {
-            height: 10px;
-            width: 100%;
-            border-radius: 4px;
-            background: linear-gradient(to right, blue, cyan, lime, yellow, red);
-            margin-top: 4px;
-        }
-        .gradient-labels {
-            display: flex;
-            justify-content: space-between;
-            font-size: 9px;
-            color: #555;
-        }
-        .legend-desc {
-            font-size: 8px;
-            color: #888;
-            margin-top: 3px;
-            padding-top: 3px;
-            border-top: 1px dashed #ddd;
-            font-style: italic;
-        }
+        .gradient-bar { height: 10px; width: 100%; border-radius: 4px; background: linear-gradient(to right, blue, cyan, lime, yellow, red); margin-top: 4px; }
+        .gradient-labels { display: flex; justify-content: space-between; font-size: 9px; color: #555; }
+        .legend-desc { font-size: 8px; color: #888; margin-top: 3px; padding-top: 3px; border-top: 1px dashed #ddd; font-style: italic; }
 
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.6);
-            z-index: 2000;
-            justify-content: center;
-            align-items: center;
-            backdrop-filter: blur(2px);
-        }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
         .modal-overlay.active { display: flex; }
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-            position: relative;
-        }
-        .modal-content h3 {
-            font-size: 16px;
-            color: #1a2a3a;
-            margin-bottom: 12px;
-            border-bottom: 2px solid #d94f4f;
-            padding-bottom: 6px;
-        }
-        .modal-close {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 22px;
-            cursor: pointer;
-            color: #888;
-            background: none;
-            border: none;
-        }
+        .modal-content { background: white; padding: 20px; border-radius: 12px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 8px 30px rgba(0,0,0,0.3); position: relative; }
+        .modal-content h3 { font-size: 16px; color: #1a2a3a; margin-bottom: 12px; border-bottom: 2px solid #d94f4f; padding-bottom: 6px; }
+        .modal-close { position: absolute; top: 10px; right: 15px; font-size: 22px; cursor: pointer; color: #888; background: none; border: none; }
         .modal-close:hover { color: #d94f4f; }
         .modal-content canvas { max-height: 300px; max-width: 100%; }
-        .modal-stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-            margin-top: 12px;
-            font-size: 11px;
-        }
-        .modal-stats .stat-item {
-            background: #f8f9fa;
-            padding: 6px 10px;
-            border-radius: 5px;
-            text-align: center;
-        }
+        .modal-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 12px; font-size: 11px; }
+        .modal-stats .stat-item { background: #f8f9fa; padding: 6px 10px; border-radius: 5px; text-align: center; }
         .modal-stats .stat-item .num { font-weight: 700; color: #d94f4f; font-size: 14px; }
         .modal-stats .stat-item .label { color: #666; font-size: 9px; }
 
-        .heatmap-controls {
-            display: none;
-            margin-top: 5px;
-            padding-top: 5px;
-            border-top: 1px dashed #ccc;
-        }
-        .heatmap-controls label {
-            font-size: 9px;
-        }
-        .heatmap-controls input[type="range"] {
-            width: 100%;
-            accent-color: #d94f4f;
-        }
+        .heatmap-controls { display: none; margin-top: 5px; padding-top: 5px; border-top: 1px dashed #ccc; }
+        .heatmap-controls label { font-size: 9px; }
+        .heatmap-controls input[type="range"] { width: 100%; accent-color: #d94f4f; }
 
-        .footer {
-            position: absolute;
-            bottom: 6px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 3px 12px;
-            border-radius: 14px;
-            font-size: 9px;
-            backdrop-filter: blur(2px);
-            pointer-events: none;
-            white-space: nowrap;
-        }
+        .footer { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(0,0,0,0.7); color: white; padding: 3px 12px; border-radius: 14px; font-size: 9px; backdrop-filter: blur(2px); pointer-events: none; white-space: nowrap; }
 
         @media (max-width: 600px) {
-            .control-panel {
-                top: 6px;
-                right: 6px;
-                max-width: 200px;
-                padding: 6px 8px;
-            }
+            .control-panel { top: 6px; right: 6px; max-width: 200px; padding: 6px 8px; }
             .control-panel h3 { font-size: 11px; }
             .control-panel select { font-size: 9px; padding: 2px 5px; }
             .filtros-container { max-height: 120px; padding: 4px 5px; }
@@ -428,11 +149,11 @@
             <option value="DENS_POB">👥 Densidad poblacional</option>
             <option value="VIV_OCUP">🏠 Viviendas ocupadas</option>
             <option value="PORC_OCU">📊 % Ocupación</option>
-            <option value="PERS_X_VIV">👤 Pers./viv.</option>
+            <option value="PERS_VIV">👤 Pers./viv.</option>
         </select>
 
         <div class="search-container">
-            <input type="text" id="searchInput" placeholder="🔍 Buscar código de manzana..." />
+            <input type="text" id="searchInput" placeholder="🔍 Buscar manzana, barrio o lugar..." />
             <button onclick="buscarManzana()">Buscar</button>
         </div>
 
@@ -532,7 +253,7 @@
             'DENS_POB': 'Densidad poblacional (hab/km²)',
             'VIV_OCUP': 'Viviendas ocupadas',
             'PORC_OCU': '% Ocupación',
-            'PERS_X_VIV': 'Personas por vivienda'
+            'PERS_VIV': 'Personas por vivienda'
         };
 
         const descripcionIndicador = {
@@ -540,8 +261,118 @@
             'DENS_POB': 'Habitantes por kilómetro cuadrado.',
             'VIV_OCUP': 'Viviendas actualmente habitadas.',
             'PORC_OCU': 'Porcentaje de viviendas ocupadas.',
-            'PERS_X_VIV': 'Promedio de personas por vivienda.'
+            'PERS_VIV': 'Promedio de personas por vivienda.'
         };
+
+        // ================================================================
+        // 4. FUNCIONES DE RANGOS MEJORADAS
+        // ================================================================
+        function getRangoIndexVivOup(valor, features) {
+            if (isNaN(valor) || valor === null || valor === 0) return 0;
+            
+            const valores = features
+                .map(f => parseFloat(f.properties['VIV_OCUP']))
+                .filter(v => !isNaN(v) && v !== null && v > 0)
+                .sort((a, b) => a - b);
+            
+            if (valores.length === 0) return 0;
+            
+            const total = valores.length;
+            const p20 = valores[Math.floor(total * 0.20)];
+            const p40 = valores[Math.floor(total * 0.40)];
+            const p60 = valores[Math.floor(total * 0.60)];
+            const p80 = valores[Math.floor(total * 0.80)];
+            
+            if (valor <= p20) return 0;
+            if (valor <= p40) return 1;
+            if (valor <= p60) return 2;
+            if (valor <= p80) return 3;
+            return 4;
+        }
+
+        function getColorVivOcup(valor, features) {
+            if (isNaN(valor) || valor === null || valor === 0) return '#cccccc';
+            
+            const valores = features
+                .map(f => parseFloat(f.properties['VIV_OCUP']))
+                .filter(v => !isNaN(v) && v !== null && v > 0)
+                .sort((a, b) => a - b);
+            
+            if (valores.length === 0) return '#cccccc';
+            
+            const total = valores.length;
+            const p20 = valores[Math.floor(total * 0.20)];
+            const p40 = valores[Math.floor(total * 0.40)];
+            const p60 = valores[Math.floor(total * 0.60)];
+            const p80 = valores[Math.floor(total * 0.80)];
+            
+            const colores = ['#e5f5e0', '#a1d99b', '#74c476', '#41ab5d', '#006d2c'];
+            
+            if (valor <= p20) return colores[0];
+            if (valor <= p40) return colores[1];
+            if (valor <= p60) return colores[2];
+            if (valor <= p80) return colores[3];
+            return colores[4];
+        }
+
+        function obtenerNombresRangosVivOcup(features) {
+            const valores = features
+                .map(f => parseFloat(f.properties['VIV_OCUP']))
+                .filter(v => !isNaN(v) && v !== null && v > 0)
+                .sort((a, b) => a - b);
+            
+            if (valores.length === 0) {
+                return ['Muy bajo', 'Bajo', 'Medio', 'Alto', 'Muy alto'];
+            }
+            
+            const total = valores.length;
+            const p20 = valores[Math.floor(total * 0.20)];
+            const p40 = valores[Math.floor(total * 0.40)];
+            const p60 = valores[Math.floor(total * 0.60)];
+            const p80 = valores[Math.floor(total * 0.80)];
+            
+            return [
+                `Muy bajo (0-${Math.round(p20)})`,
+                `Bajo (${Math.round(p20)}-${Math.round(p40)})`,
+                `Medio (${Math.round(p40)}-${Math.round(p60)})`,
+                `Alto (${Math.round(p60)}-${Math.round(p80)})`,
+                `Muy alto (>${Math.round(p80)})`
+            ];
+        }
+
+        function getRangoIndex(variable, value) {
+            if (isNaN(value) || value === null || value === 0) return 0;
+            
+            if (variable === 'DENS_POB') {
+                if (value < 100) return 0;
+                if (value < 500) return 1;
+                if (value < 1500) return 2;
+                if (value < 5000) return 3;
+                return 4;
+            }
+            
+            if (variable === 'VIV_OCUP') {
+                return getRangoIndexVivOup(value, allFeatures);
+            }
+            
+            if (variable === 'PORC_OCU') {
+                if (value < 20) return 0;
+                if (value < 40) return 1;
+                if (value < 60) return 2;
+                if (value < 80) return 3;
+                return 4;
+            }
+            
+            if (variable === 'PERS_VIV') {
+                if (value < 1.2) return 0;
+                if (value < 2.4) return 1;
+                if (value < 3.6) return 2;
+                if (value < 4.8) return 3;
+                return 4;
+            }
+            
+            return 0;
+        }
 
         function getColorByValue(variable, value) {
             if (isNaN(value) || value === null || value === 0) return '#cccccc';
@@ -559,11 +390,7 @@
             }
             
             if (variable === 'VIV_OCUP') {
-                if (value < 1600) return '#a1d99b';
-                if (value < 3200) return '#74c476';
-                if (value < 4800) return '#41ab5d';
-                if (value < 6400) return '#238b45';
-                return '#005a32';
+                return getColorVivOcup(value, allFeatures);
             }
             
             if (variable === 'PORC_OCU') {
@@ -574,7 +401,7 @@
                 return '#8c2d04';
             }
             
-            if (variable === 'PERS_X_VIV') {
+            if (variable === 'PERS_VIV') {
                 if (value < 1.2) return '#bcbddc';
                 if (value < 2.4) return '#9e9ac8';
                 if (value < 3.6) return '#807dba';
@@ -585,62 +412,40 @@
             return '#cccccc';
         }
 
-        function getRangoIndex(variable, value) {
-            if (isNaN(value) || value === null || value === 0) return 0;
-            
-            if (variable === 'DENS_POB') {
-                if (value < 100) return 0;
-                if (value < 500) return 1;
-                if (value < 1500) return 2;
-                if (value < 5000) return 3;
-                return 4;
-            }
-            
-            if (variable === 'VIV_OCUP') {
-                if (value < 1600) return 0;
-                if (value < 3200) return 1;
-                if (value < 4800) return 2;
-                if (value < 6400) return 3;
-                return 4;
-            }
-            
-            if (variable === 'PORC_OCU') {
-                if (value < 20) return 0;
-                if (value < 40) return 1;
-                if (value < 60) return 2;
-                if (value < 80) return 3;
-                return 4;
-            }
-            
-            if (variable === 'PERS_X_VIV') {
-                if (value < 1.2) return 0;
-                if (value < 2.4) return 1;
-                if (value < 3.6) return 2;
-                if (value < 4.8) return 3;
-                return 4;
-            }
-            
-            return 0;
-        }
-
         function obtenerNombresRangos(variable) {
             if (variable === 'DENS_POB') {
                 return ['Muy baja (<100)', 'Baja (100-500)', 'Media (500-1500)', 'Alta (1500-5000)', 'Muy alta (>5000)'];
             }
             if (variable === 'VIV_OCUP') {
-                return ['Muy bajo (0-1600)', 'Bajo (1600-3200)', 'Medio (3200-4800)', 'Alto (4800-6400)', 'Muy alto (6400-8000)'];
+                return obtenerNombresRangosVivOcup(allFeatures);
             }
             if (variable === 'PORC_OCU') {
                 return ['Muy bajo (0-20%)', 'Bajo (20-40%)', 'Medio (40-60%)', 'Alto (60-80%)', 'Muy alto (80-100%)'];
             }
-            if (variable === 'PERS_X_VIV') {
+            if (variable === 'PERS_VIV') {
                 return ['Muy bajo (0.0-1.2)', 'Bajo (1.2-2.4)', 'Medio (2.4-3.6)', 'Alto (3.6-4.8)', 'Muy alto (4.8-6.0)'];
             }
             return ['Muy bajo', 'Bajo', 'Medio', 'Alto', 'Muy alto'];
         }
 
+        function getColoresRangos(variable) {
+            if (variable === 'DENS_POB') {
+                return ['#fcbba1', '#fc9272', '#fb6a4a', '#de2d26', '#a50f15'];
+            }
+            if (variable === 'VIV_OCUP') {
+                return ['#e5f5e0', '#a1d99b', '#74c476', '#41ab5d', '#006d2c'];
+            }
+            if (variable === 'PORC_OCU') {
+                return ['#fdd0a2', '#fdae6b', '#f16913', '#d94801', '#8c2d04'];
+            }
+            if (variable === 'PERS_VIV') {
+                return ['#bcbddc', '#9e9ac8', '#807dba', '#6a51a3', '#4a1486'];
+            }
+            return ['#a1d99b', '#74c476', '#41ab5d', '#238b45', '#005a32'];
+        }
+
         // ================================================================
-        // 4. FILTROS
+        // 5. FILTROS
         // ================================================================
         function getFiltros() {
             const checkboxes = document.querySelectorAll('.filtro-checkbox input[type="checkbox"]');
@@ -670,7 +475,7 @@
         }
 
         // ================================================================
-        // 5. CONSTRUIR FILTROS
+        // 6. CONSTRUIR FILTROS
         // ================================================================
         function construirFiltros(variable) {
             const container = document.getElementById('filtros-container');
@@ -694,6 +499,7 @@
                 }
             } else {
                 const nombresRangos = obtenerNombresRangos(variable);
+                const colores = getColoresRangos(variable);
                 html = `<h4>🔍 Filtrar por rango:</h4>
                     <div class="select-all-container">
                         <button onclick="toggleAllFiltros(true)">✅ Todo</button>
@@ -702,7 +508,7 @@
                 for (let i = 0; i < nombresRangos.length; i++) {
                     const key = `rango_${i}`;
                     const checked = filtrosActivos[key] !== false;
-                    const color = getColorByValue(variable, i / (nombresRangos.length - 1));
+                    const color = colores[i] || '#cccccc';
                     html += `<label class="filtro-checkbox">
                         <input type="checkbox" value="${key}" ${checked ? 'checked' : ''} />
                         <span class="color-muestra" style="background:${color};"></span>
@@ -775,19 +581,21 @@
         }
 
         // ================================================================
-        // 6. BUSCADOR DE MANZANA
+        // 7. BUSCADOR DE MANZANA (CON BARR_NOMB Y LUPO_NOMB)
         // ================================================================
         function buscarManzana() {
-            const texto = document.getElementById('searchInput').value.trim();
+            const texto = document.getElementById('searchInput').value.toLowerCase().trim();
             if (!texto || !geoJsonData) return;
 
             const encontrados = allFeatures.filter(f => {
-                const code = String(f.properties.MANZA_CODE || '');
-                return code.includes(texto);
+                const code = String(f.properties.MANZA_CODE || '').toLowerCase();
+                const barrio = String(f.properties.BARR_NOMB || '').toLowerCase();
+                const lugar = String(f.properties.LUPO_NOMB || '').toLowerCase();
+                return code.includes(texto) || barrio.includes(texto) || lugar.includes(texto);
             });
 
             if (encontrados.length === 0) {
-                alert('No se encontró la manzana: ' + texto);
+                alert('No se encontraron resultados para: ' + texto);
                 return;
             }
 
@@ -828,17 +636,29 @@
         }
 
         // ================================================================
-        // 7. POPUP
+        // 8. POPUP (CON BARR_NOMB Y LUPO_NOMB)
         // ================================================================
         function crearPopup(p) {
             const areaM2 = p.AREA || 0;
             const areaKm2 = areaM2 / 1000000;
             const manzaCode = p.MANZA_CODE || '';
+            const barrio = p.BARR_NOMB || '';
+            const lugar = p.LUPO_NOMB || '';
             
-            return `<div style="font-family:'Segoe UI',sans-serif;min-width:170px;max-width:240px;font-size:11px;">
+            let ubicacion = '';
+            if (barrio && lugar) {
+                ubicacion = `${barrio} - ${lugar}`;
+            } else if (barrio) {
+                ubicacion = barrio;
+            } else if (lugar) {
+                ubicacion = lugar;
+            }
+            
+            return `<div style="font-family:'Segoe UI',sans-serif;min-width:190px;max-width:260px;font-size:11px;">
                 <h4 style="margin:0 0 2px 0;color:#1a2a3a;font-size:12px;">
                     🏠 Manzana: ${manzaCode}
                 </h4>
+                ${ubicacion ? `<div style="font-size:10px;color:#666;margin-bottom:2px;">📍 ${ubicacion}</div>` : ''}
                 <hr style="margin:3px 0;border:0;border-top:1px solid #ddd;">
                 <table style="width:100%;font-size:10px;line-height:1.4;">
                     <tr><td><strong>Viviendas:</strong></td><td>${p.VIVIENDA || 0}</td></tr>
@@ -846,7 +666,7 @@
                     <tr><td><strong>Ocupadas:</strong></td><td>${p.VIV_OCUP || 0}</td></tr>
                     <tr><td><strong>% Ocupación:</strong></td><td>${p.PORC_OCU ? p.PORC_OCU.toFixed(1) : 0}%</td></tr>
                     <tr><td><strong>Densidad:</strong></td><td>${p.DENS_POB ? p.DENS_POB.toFixed(1) : 0} hab/km²</td></tr>
-                    <tr><td><strong>Pers./viv.:</strong></td><td>${p.PERS_X_VIV ? p.PERS_X_VIV.toFixed(2) : 0}</td></tr>
+                    <tr><td><strong>Pers./viv.:</strong></td><td>${p.PERS_VIV ? p.PERS_VIV.toFixed(2) : 0}</td></tr>
                     <tr><td><strong>Categoría:</strong></td><td>${p.CAT_DENS || 'Sin datos'}</td></tr>
                     <tr><td><strong>Área:</strong></td><td>${areaKm2.toFixed(2)} km² (${areaM2.toFixed(0)} m²)</td></tr>
                 </table>
@@ -854,7 +674,7 @@
         }
 
         // ================================================================
-        // 8. EXPORTAR CSV
+        // 9. EXPORTAR CSV
         // ================================================================
         function exportarCSV() {
             if (!geoJsonData || allFeatures.length === 0) {
@@ -863,18 +683,20 @@
             }
 
             const features = currentFeaturesFiltradas.length > 0 ? currentFeaturesFiltradas : allFeatures;
-            const headers = ['MANZA_CODE', 'VIVIENDA', 'V_PERSONAS', 'VIV_OCUP', 'PORC_OCU', 'DENS_POB', 'PERS_X_VIV', 'CAT_DENS', 'AREA_KM2'];
+            const headers = ['MANZA_CODE', 'BARR_NOMB', 'LUPO_NOMB', 'VIVIENDA', 'V_PERSONAS', 'VIV_OCUP', 'PORC_OCU', 'DENS_POB', 'PERS_VIV', 'CAT_DENS', 'AREA_KM2'];
 
             const rows = features.map(f => {
                 const p = f.properties;
                 return [
                     p.MANZA_CODE || '',
+                    p.BARR_NOMB || '',
+                    p.LUPO_NOMB || '',
                     p.VIVIENDA || 0,
                     p.V_PERSONAS || 0,
                     p.VIV_OCUP || 0,
                     p.PORC_OCU ? p.PORC_OCU.toFixed(1) : 0,
                     p.DENS_POB ? p.DENS_POB.toFixed(1) : 0,
-                    p.PERS_X_VIV ? p.PERS_X_VIV.toFixed(2) : 0,
+                    p.PERS_VIV ? p.PERS_VIV.toFixed(2) : 0,
                     p.CAT_DENS || '',
                     ((p.AREA || 0) / 1000000).toFixed(4)
                 ];
@@ -892,7 +714,7 @@
         }
 
         // ================================================================
-        // 9. ESTADÍSTICAS
+        // 10. ESTADÍSTICAS
         // ================================================================
         function mostrarEstadisticas() {
             document.getElementById('statsModal').classList.add('active');
@@ -925,7 +747,7 @@
                     });
                     labels = counts.map((_, i) => `${(min + i * step).toFixed(1)}-${(min + (i + 1) * step).toFixed(1)}`);
                     data = counts;
-                    colors = ['#a1d99b', '#74c476', '#41ab5d', '#238b45', '#005a32'];
+                    colors = getColoresRangos(variable);
                 }
             }
 
@@ -976,7 +798,7 @@
         }
 
         // ================================================================
-        // 10. ACTUALIZAR MAPA
+        // 11. ACTUALIZAR MAPA
         // ================================================================
         function updateMap() {
             if (!geoJsonData) return;
@@ -992,7 +814,6 @@
 
             // Modo Heatmap
             if (currentMode === 'heatmap') {
-                // Preparar datos para heatmap
                 const heatData = { max: 100, data: [] };
                 let maxVal = -Infinity;
 
@@ -1093,7 +914,7 @@
         }
 
         // ================================================================
-        // 11. LEYENDA
+        // 12. LEYENDA
         // ================================================================
         function updateLegend(variable, features) {
             const legendDiv = document.getElementById('legend');
@@ -1109,10 +930,10 @@
                 }
             } else {
                 const nombresRangos = obtenerNombresRangos(variable);
+                const colores = getColoresRangos(variable);
                 for (let i = 0; i < nombresRangos.length; i++) {
-                    const color = getColorByValue(variable, i / (nombresRangos.length - 1));
                     html += `<div class="legend-item">
-                        <div class="legend-color" style="background:${color};"></div>
+                        <div class="legend-color" style="background:${colores[i]};"></div>
                         <span class="legend-text">${nombresRangos[i]}</span>
                     </div>`;
                 }
@@ -1124,7 +945,7 @@
         }
 
         // ================================================================
-        // 12. INICIALIZAR HEATMAP
+        // 13. INICIALIZAR HEATMAP
         // ================================================================
         function initHeatmap() {
             if (typeof HeatmapOverlay === 'undefined') {
@@ -1149,7 +970,49 @@
         }
 
         // ================================================================
-        // 13. CARGA DEL GEOJSON
+        // 14. ACTUALIZAR HEATMAP
+        // ================================================================
+        function actualizarHeatmap() {
+            if (!heatmapLayer || currentMode !== 'heatmap') {
+                console.warn('⚠️ Heatmap no disponible para actualizar');
+                return;
+            }
+            
+            const radius = parseInt(document.getElementById('radius-slider').value);
+            const blur = parseFloat(document.getElementById('blur-slider').value) / 40;
+            
+            heatmapConfig.radius = radius;
+            heatmapConfig.blur = blur;
+            
+            try {
+                if (heatmapLayer._heatmap) {
+                    heatmapLayer._heatmap.configure({
+                        radius: radius,
+                        blur: blur
+                    });
+                    if (heatmapLayer._update) {
+                        heatmapLayer._update();
+                    }
+                } else {
+                    const currentData = heatmapLayer._data;
+                    if (currentData) {
+                        map.removeLayer(heatmapLayer);
+                        heatmapLayer = new HeatmapOverlay(heatmapConfig);
+                        map.addLayer(heatmapLayer);
+                        heatmapLayer.setData(currentData);
+                    }
+                }
+                console.log(`✅ Heatmap actualizado: radius=${radius}, blur=${blur.toFixed(3)}`);
+            } catch (e) {
+                console.warn('⚠️ Error al actualizar heatmap:', e);
+                if (currentMode === 'heatmap' && geoJsonData) {
+                    updateMap();
+                }
+            }
+        }
+
+        // ================================================================
+        // 15. CARGA DEL GEOJSON
         // ================================================================
         async function loadGeoJSON() {
             try {
@@ -1182,7 +1045,7 @@
         }
 
         // ================================================================
-        // 14. EVENTOS
+        // 16. EVENTOS
         // ================================================================
         document.getElementById('variable-select').addEventListener('change', function(e) {
             currentVariable = e.target.value;
@@ -1227,26 +1090,26 @@
         });
 
         // Controles de heatmap
-        document.getElementById('radius-slider').addEventListener('input', function(e) {
-            document.getElementById('radius-val').innerText = e.target.value;
-            if (heatmapConfig) {
-                heatmapConfig.radius = parseInt(e.target.value);
-                if (heatmapLayer) {
-                    heatmapLayer.configure(heatmapConfig);
-                    heatmapLayer._update();
-                }
-            }
+        const radiusSlider = document.getElementById('radius-slider');
+        const blurSlider = document.getElementById('blur-slider');
+        const radiusVal = document.getElementById('radius-val');
+        const blurVal = document.getElementById('blur-val');
+        let heatmapTimeout = null;
+
+        radiusSlider.addEventListener('input', function(e) {
+            radiusVal.innerText = e.target.value;
+            clearTimeout(heatmapTimeout);
+            heatmapTimeout = setTimeout(() => {
+                actualizarHeatmap();
+            }, 100);
         });
 
-        document.getElementById('blur-slider').addEventListener('input', function(e) {
-            document.getElementById('blur-val').innerText = e.target.value;
-            if (heatmapConfig) {
-                heatmapConfig.blur = parseFloat(e.target.value) / 40;
-                if (heatmapLayer) {
-                    heatmapLayer.configure(heatmapConfig);
-                    heatmapLayer._update();
-                }
-            }
+        blurSlider.addEventListener('input', function(e) {
+            blurVal.innerText = e.target.value;
+            clearTimeout(heatmapTimeout);
+            heatmapTimeout = setTimeout(() => {
+                actualizarHeatmap();
+            }, 100);
         });
 
         window.toggleAllFiltros = toggleAllFiltros;
@@ -1257,10 +1120,17 @@
         window.closeStats = closeStats;
 
         // ================================================================
-        // 15. INICIO
+        // 17. INICIO
         // ================================================================
         initHeatmap();
         loadGeoJSON();
+        
+        // Sincronizar sliders
+        document.getElementById('radius-slider').value = 30;
+        document.getElementById('radius-val').innerText = '30';
+        document.getElementById('blur-slider').value = 15;
+        document.getElementById('blur-val').innerText = '15';
+        
         console.log('🗺️ Mapa de Manzanas iniciado – RAUL VIQUEZ');
     </script>
 
