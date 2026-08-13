@@ -932,6 +932,79 @@
                 return;
             }
 
+                // Mostrar polígonos transparentes
+                currentLayer = L.geoJSON(geoJsonData, {
+                    style: {
+                        fillColor: 'transparent',
+                        fillOpacity: 0.01,
+                        color: 'rgba(255,255,255,0.3)',
+                        weight: 1
+                    },
+                    onEachFeature: function(feature, layer) {
+                        layer.bindPopup(crearPopup(feature.properties));
+                    }
+                }).addTo(map);
+
+                document.getElementById('legend').innerHTML = `
+                    <div class="legend-title">🔥 Mapa de Calor</div>
+                    <div class="gradient-bar"></div>
+                    <div class="gradient-labels">
+                        <span>Bajo (${heatData.data.length > 0 ? Math.min(...heatData.data.map(d => d.count)).toFixed(1) : 0})</span>
+                        <span>Alto (${heatData.max.toFixed(1)})</span>
+                    </div>
+                    <div class="legend-desc">💡 Intensidad: ${variableLabels[variable] || variable}</div>
+                `;
+
+                document.getElementById('info-label').textContent = variableLabels[variable] || variable;
+                document.getElementById('info-value').textContent = `${featuresFiltradas.length} manzanas en calor`;
+                return;
+            }
+
+            // Modo Polígonos
+            currentLayer = L.geoJSON({
+                type: 'FeatureCollection',
+                features: featuresFiltradas
+            }, {
+                style: function(feature) {
+                    let value = feature.properties[variable];
+                    let color = '#cccccc';
+                    if (variable === 'CAT_DENS') {
+                        color = catColors[value] || '#cccccc';
+                    } else {
+                        const numVal = parseFloat(value);
+                        if (!isNaN(numVal) && numVal !== null) {
+                            color = getColorByValue(variable, numVal);
+                        }
+                    }
+                    return { fillColor: color, weight: 1, opacity: 0.8, color: '#333333', fillOpacity: 0.8 };
+                },
+                onEachFeature: function(feature, layer) {
+                    layer.bindPopup(crearPopup(feature.properties));
+                    layer.on('mouseover', function() {
+                        this.setStyle({ weight: 2.5, color: '#000000', fillOpacity: 0.95 });
+                        this.bringToFront();
+                    });
+                    layer.on('mouseout', function() {
+                        const value = this.feature.properties[variable];
+                        let color = '#cccccc';
+                        if (variable === 'CAT_DENS') {
+                            color = catColors[value] || '#cccccc';
+                        } else {
+                            const numVal = parseFloat(value);
+                            if (!isNaN(numVal) && numVal !== null) {
+                                color = getColorByValue(variable, numVal);
+                            }
+                        }
+                        this.setStyle({ weight: 1, color: '#333333', fillColor: color, fillOpacity: 0.8 });
+                    });
+                }
+            }).addTo(map);
+
+            updateLegend(variable, featuresFiltradas);
+            document.getElementById('info-label').textContent = variableLabels[variable] || variable;
+            document.getElementById('info-value').textContent = 'Clic en una manzana para detalles';
+        }
+
         // ================================================================
         // 12. LEYENDA
         // ================================================================
