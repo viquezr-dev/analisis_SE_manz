@@ -818,45 +818,105 @@
 
             // Modo Heatmap
             if (currentMode === 'heatmap') {
+                // Preparar datos para heatmap
                 const heatData = { max: 100, data: [] };
                 let maxVal = -Infinity;
-
+                let puntosValidos = 0;
+            
                 featuresFiltradas.forEach(f => {
                     let val = parseFloat(f.properties[variable]);
+                    
+                    // Convertir CAT_DENS a numérico
                     if (variable === 'CAT_DENS') {
                         const catOrder = { 'MUY_BAJA': 1, 'BAJA': 2, 'MEDIA': 3, 'ALTA': 4, 'MUY_ALTA': 5 };
                         val = catOrder[f.properties[variable]] || 0;
                     }
-                    if (isNaN(val) || val === null) return;
-
+                    
+                    if (isNaN(val) || val === null || val === 0) return;
+            
                     try {
+                        // Calcular centroide con turf
                         const centroid = turf.centroid(f);
                         const coords = centroid.geometry.coordinates;
-                        if (val > maxVal) maxVal = val;
-                        heatData.data.push({ lat: coords[1], lng: coords[0], count: val });
-                    } catch (e) {}
+                        
+                        if (coords && coords.length === 2) {
+                            // Normalizar intensidad para el heatmap
+                            const intensidad = val > 0 ? val : 0.1;
+                            heatData.data.push({ 
+                                lat: coords[1], 
+                                lng: coords[0], 
+                                count: intensidad 
+                            });
+                            
+                            if (val > maxVal) maxVal = val;
+                            puntosValidos++;
+                        }
+                    } catch (e) {
+                        // Si falla turf, intentar calcular centroide manualmente
+                        try {
+                            const geom = f.geometry;
+                            if (geom && geom.type === 'Polygon') {
+                                const coords = geom.coordinates[0];
+                                let lat = 0, lng = 0, count = 0;
+                                for (const c of coords) {
+                                    if (Array.isArray(c) && c.length === 2) {
+                                        lng += c[0];
+                                        lat += c[1];
+                                        count++;
+                                    }
+                                }
+                                if (count > 0) {
+                                    const intensidad = val > 0 ? val : 0.1;
+                                    heatData.data.push({ 
+                                        lat: lat / count, 
+                                        lng: lng / count, 
+                                        count: intensidad 
+                                    });
+                                    if (val > maxVal) maxVal = val;
+                                    puntosValidos++;
+                                }
+                            }
+                        } catch (e2) {
+                            // Ignorar
+                        }
+                    }
                 });
-
+            
                 heatData.max = maxVal === -Infinity ? 100 : maxVal;
                 
-                if (map.hasLayer(heatmapLayer)) map.removeLayer(heatmapLayer);
+                // Eliminar heatmap anterior
+                if (map.hasLayer(heatmapLayer)) {
+                    map.removeLayer(heatmapLayer);
+                }
+                
+                // Crear nuevo heatmap con configuración correcta
+                if (!heatmapConfig) {
+                    initHeatmap();
+                }
+                
+                // Asegurar que scaleRadius está activo
+                heatmapConfig.scaleRadius = true;
+                
                 heatmapLayer = new HeatmapOverlay(heatmapConfig);
                 map.addLayer(heatmapLayer);
                 heatmapLayer.setData(heatData);
-
-                // Mostrar polígonos transparentes
+                
+                console.log(`🔥 Heatmap generado: ${puntosValidos} puntos, max=${heatData.max}`);
+            
+                // Mostrar polígonos transparentes (para referencia)
                 currentLayer = L.geoJSON(geoJsonData, {
                     style: {
                         fillColor: 'transparent',
                         fillOpacity: 0.01,
-                        color: 'rgba(255,255,255,0.3)',
+                        color: 'rgba(255,255,255,0.2)',
                         weight: 1
                     },
                     onEachFeature: function(feature, layer) {
                         layer.bindPopup(crearPopup(feature.properties));
                     }
                 }).addTo(map);
-
+            
+                // Leyenda
                 document.getElementById('legend').innerHTML = `
                     <div class="legend-title">🔥 Mapa de Calor</div>
                     <div class="gradient-bar"></div>
@@ -864,58 +924,13 @@
                         <span>Bajo (${heatData.data.length > 0 ? Math.min(...heatData.data.map(d => d.count)).toFixed(1) : 0})</span>
                         <span>Alto (${heatData.max.toFixed(1)})</span>
                     </div>
-                    <div class="legend-desc">💡 Intensidad: ${variableLabels[variable] || variable}</div>
+                    <div class="legend-desc">💡 ${puntosValidos} puntos · ${variableLabels[variable] || variable}</div>
                 `;
-
+            
                 document.getElementById('info-label').textContent = variableLabels[variable] || variable;
-                document.getElementById('info-value').textContent = `${featuresFiltradas.length} manzanas en calor`;
+                document.getElementById('info-value').textContent = `${puntosValidos} manzanas en calor`;
                 return;
             }
-
-            // Modo Polígonos
-            currentLayer = L.geoJSON({
-                type: 'FeatureCollection',
-                features: featuresFiltradas
-            }, {
-                style: function(feature) {
-                    let value = feature.properties[variable];
-                    let color = '#cccccc';
-                    if (variable === 'CAT_DENS') {
-                        color = catColors[value] || '#cccccc';
-                    } else {
-                        const numVal = parseFloat(value);
-                        if (!isNaN(numVal) && numVal !== null) {
-                            color = getColorByValue(variable, numVal);
-                        }
-                    }
-                    return { fillColor: color, weight: 1, opacity: 0.8, color: '#333333', fillOpacity: 0.8 };
-                },
-                onEachFeature: function(feature, layer) {
-                    layer.bindPopup(crearPopup(feature.properties));
-                    layer.on('mouseover', function() {
-                        this.setStyle({ weight: 2.5, color: '#000000', fillOpacity: 0.95 });
-                        this.bringToFront();
-                    });
-                    layer.on('mouseout', function() {
-                        const value = this.feature.properties[variable];
-                        let color = '#cccccc';
-                        if (variable === 'CAT_DENS') {
-                            color = catColors[value] || '#cccccc';
-                        } else {
-                            const numVal = parseFloat(value);
-                            if (!isNaN(numVal) && numVal !== null) {
-                                color = getColorByValue(variable, numVal);
-                            }
-                        }
-                        this.setStyle({ weight: 1, color: '#333333', fillColor: color, fillOpacity: 0.8 });
-                    });
-                }
-            }).addTo(map);
-
-            updateLegend(variable, featuresFiltradas);
-            document.getElementById('info-label').textContent = variableLabels[variable] || variable;
-            document.getElementById('info-value').textContent = 'Clic en una manzana para detalles';
-        }
 
         // ================================================================
         // 12. LEYENDA
@@ -953,16 +968,17 @@
         // ================================================================
         function initHeatmap() {
             if (typeof HeatmapOverlay === 'undefined') {
-                console.warn('⚠️ HeatmapOverlay no disponible');
+                console.warn('⚠️ HeatmapOverlay no está disponible');
+                setTimeout(initHeatmap, 500);
                 return;
             }
             
             heatmapConfig = {
-                radius: 30,
+                radius: 25,              // Radio en PÍXELES (no metros)
                 maxOpacity: 0.8,
                 minOpacity: 0.05,
-                blur: 0.375,
-                scaleRadius: false,
+                blur: 0.75,              // Difuminado (0-1)
+                scaleRadius: true,       // ✅ IMPORTANTE: escala con el zoom
                 useLocalExtrema: false,
                 latField: 'lat',
                 lngField: 'lng',
@@ -970,14 +986,14 @@
             };
             
             heatmapLayer = new HeatmapOverlay(heatmapConfig);
-            console.log('✅ Heatmap inicializado');
+            console.log('✅ Heatmap inicializado correctamente');
         }
 
         // ================================================================
         // 14. ACTUALIZAR HEATMAP
         // ================================================================
         function actualizarHeatmap() {
-            if (!heatmapLayer || currentMode !== 'heatmap') {
+            if (!heatmapLayer || !heatmapConfig) {
                 console.warn('⚠️ Heatmap no disponible para actualizar');
                 return;
             }
@@ -985,30 +1001,38 @@
             const radius = parseInt(document.getElementById('radius-slider').value);
             const blur = parseFloat(document.getElementById('blur-slider').value) / 40;
             
+            // Actualizar configuración
             heatmapConfig.radius = radius;
             heatmapConfig.blur = blur;
+            heatmapConfig.scaleRadius = true; // Mantener escalado activo
             
             try {
+                // Método 1: Usar _heatmap (heatmap.js interno)
                 if (heatmapLayer._heatmap) {
                     heatmapLayer._heatmap.configure({
                         radius: radius,
-                        blur: blur
+                        blur: blur,
+                        scaleRadius: true
                     });
                     if (heatmapLayer._update) {
                         heatmapLayer._update();
                     }
-                } else {
-                    const currentData = heatmapLayer._data;
+                    console.log(`✅ Heatmap actualizado: radius=${radius}px, blur=${blur.toFixed(3)}`);
+                } 
+                // Método 2: Recrear el heatmap
+                else {
+                    const currentData = heatmapLayer._data || heatmapLayer.data;
                     if (currentData) {
                         map.removeLayer(heatmapLayer);
                         heatmapLayer = new HeatmapOverlay(heatmapConfig);
                         map.addLayer(heatmapLayer);
                         heatmapLayer.setData(currentData);
+                        console.log('✅ Heatmap recreado con nueva configuración');
                     }
                 }
-                console.log(`✅ Heatmap actualizado: radius=${radius}, blur=${blur.toFixed(3)}`);
             } catch (e) {
                 console.warn('⚠️ Error al actualizar heatmap:', e);
+                // Fallback: recargar el mapa
                 if (currentMode === 'heatmap' && geoJsonData) {
                     updateMap();
                 }
