@@ -1037,46 +1037,40 @@
         // 14. ACTUALIZAR HEATMAP
         // ================================================================
         function actualizarHeatmap() {
-            if (!heatmapLayer || !heatmapConfig) {
+            if (!heatmapLayer || currentMode !== 'heatmap') {
                 console.warn('⚠️ Heatmap no disponible para actualizar');
                 return;
             }
             
-            const radius = parseInt(document.getElementById('radius-slider').value);
+            // Convertimos el valor entero del slider (10-80) a una escala decimal adecuada (0.001 - 0.008)
+            const rawRadius = parseInt(document.getElementById('radius-slider').value);
+            const radius = rawRadius / 5000; 
             const blur = parseFloat(document.getElementById('blur-slider').value) / 40;
             
-            // Actualizar configuración
             heatmapConfig.radius = radius;
             heatmapConfig.blur = blur;
-            heatmapConfig.scaleRadius = true; // Mantener escalado activo
             
             try {
-                // Método 1: Usar _heatmap (heatmap.js interno)
                 if (heatmapLayer._heatmap) {
                     heatmapLayer._heatmap.configure({
                         radius: radius,
-                        blur: blur,
-                        scaleRadius: true
+                        blur: blur
                     });
                     if (heatmapLayer._update) {
                         heatmapLayer._update();
                     }
-                    console.log(`✅ Heatmap actualizado: radius=${radius}px, blur=${blur.toFixed(3)}`);
-                } 
-                // Método 2: Recrear el heatmap
-                else {
-                    const currentData = heatmapLayer._data || heatmapLayer.data;
+                } else {
+                    const currentData = heatmapLayer._data;
                     if (currentData) {
                         map.removeLayer(heatmapLayer);
                         heatmapLayer = new HeatmapOverlay(heatmapConfig);
                         map.addLayer(heatmapLayer);
                         heatmapLayer.setData(currentData);
-                        console.log('✅ Heatmap recreado con nueva configuración');
                     }
                 }
+                console.log(`✅ Heatmap actualizado: radius=${radius}, blur=${blur.toFixed(3)}`);
             } catch (e) {
                 console.warn('⚠️ Error al actualizar heatmap:', e);
-                // Fallback: recargar el mapa
                 if (currentMode === 'heatmap' && geoJsonData) {
                     updateMap();
                 }
