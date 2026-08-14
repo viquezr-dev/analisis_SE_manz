@@ -1306,38 +1306,21 @@
         // ★ CORRECCIÓN: FORZAR ACTUALIZACIÓN DEL HEATMAP AL MOVER/ZOOM
         // ================================================================
         map.on('moveend zoomend', function() {
-            if (currentMode === 'heatmap' && heatmapLayer) {
-                // Si es el fallback de canvas, forzar redibujo
-                if (typeof heatmapLayer._draw === 'function') {
-                    heatmapLayer._reset();
-                    heatmapLayer._draw();
-                }
-                // Si es L.heatLayer, recrearlo para que se ajuste
-                else if (typeof L.heatLayer === 'function' && heatmapPoints && heatmapPoints.length > 0) {
+            if (currentMode === 'heatmap' && heatmapLayer && heatmapDataCache) {
+                // Recrear el heatmap para que se alinee correctamente
+                try {
                     const radius = parseInt(document.getElementById('radius-slider').value) || 10;
                     const blur = parseInt(document.getElementById('blur-slider').value) || 5;
-                    const heatData = heatmapPoints.map(p => [p.lat, p.lng, p.intensity]);
                     
-                    try {
-                        map.removeLayer(heatmapLayer);
-                        heatmapLayer = L.heatLayer(heatData, {
-                            radius: radius,
-                            blur: blur,
-                            maxZoom: 15,
-                            minOpacity: 0.18,
-                            maxOpacity: 0.72,
-                            gradient: {
-                                0.0: 'blue',
-                                0.2: 'cyan',
-                                0.4: 'lime',
-                                0.6: 'yellow',
-                                0.8: 'orange',
-                                1.0: 'red'
-                            }
-                        }).addTo(map);
-                    } catch (e) {
-                        console.warn('⚠️ Error al recrear heatmap en zoom:', e);
-                    }
+                    heatmapConfig.radius = radius;
+                    heatmapConfig.blur = blur;
+                    
+                    map.removeLayer(heatmapLayer);
+                    heatmapLayer = new HeatmapOverlay(heatmapConfig);
+                    map.addLayer(heatmapLayer);
+                    heatmapLayer.setData(heatmapDataCache);
+                } catch (e) {
+                    console.warn('⚠️ Error al actualizar heatmap en zoom:', e);
                 }
             }
         });
