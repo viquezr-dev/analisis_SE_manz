@@ -238,7 +238,8 @@
         let currentFeaturesFiltradas = [];
         let currentMode = 'polygon';
         let heatmapLayer = null;
-        let heatmapPoints = [];
+        let heatmapConfig = null;
+        let heatmapDataCache = null;
 
         // ================================================================
         // 3. PALETAS DE COLORES Y FUNCIONES DE RANGOS
@@ -805,6 +806,31 @@
                 chartInstance = null; }
         }
 
+
+        function initHeatmapConfig() {
+            const radius = parseInt(document.getElementById('radius-slider').value) || 10;
+            const blur = parseInt(document.getElementById('blur-slider').value) / 40 || 0.125;
+            
+            heatmapConfig = {
+                radius: radius,
+                blur: blur,
+                maxOpacity: 0.7,
+                minOpacity: 0.05,
+                scaleRadius: true,
+                useLocalExtrema: false,
+                latField: 'lat',
+                lngField: 'lng',
+                valueField: 'count',
+                gradient: {
+                    0.0: 'blue',
+                    0.2: 'cyan',
+                    0.4: 'lime',
+                    0.6: 'yellow',
+                    0.8: 'orange',
+                    1.0: 'red'
+                }
+            };
+        }
         // ================================================================
         // 10. CALCULAR PUNTOS PARA HEATMAP
         // ================================================================
@@ -1151,48 +1177,43 @@
         // 14. ACTUALIZAR HEATMAP (sliders)
         // ================================================================
         function actualizarHeatmapParams() {
-            if (!heatmapPoints || heatmapPoints.length === 0) {
-                updateMap();
+            if (!heatmapLayer || currentMode !== 'heatmap' || !map.hasLayer(heatmapLayer)) {
                 return;
             }
             
             const radius = parseInt(document.getElementById('radius-slider').value) || 10;
-            const blur = parseInt(document.getElementById('blur-slider').value) || 5;
+            const blur = parseInt(document.getElementById('blur-slider').value) / 40 || 0.125;
+            
+            if (!heatmapConfig) {
+                initHeatmapConfig();
+            }
+            
+            heatmapConfig.radius = radius;
+            heatmapConfig.blur = blur;
             
             try {
-                if (heatmapLayer) {
-                    map.removeLayer(heatmapLayer);
-                    heatmapLayer = null;
+                // Método 1: actualización ligera (NO congela)
+                if (heatmapLayer._heatmap && typeof heatmapLayer._heatmap.configure === 'function') {
+                    heatmapLayer._heatmap.configure({ radius: radius, blur: blur });
+                    if (typeof heatmapLayer._update === 'function') {
+                        heatmapLayer._update();
+                    }
+                    return;
                 }
                 
-                const heatData = heatmapPoints.map(p => [p.lat, p.lng, p.intensity]);
-                
-                const heatConfig = {
-                    radius: radius,
-                    blur: blur,
-                    maxZoom: 15,
-                    minOpacity: 0.18,
-                    maxOpacity: 0.72,
-                    gradient: {
-                        0.0: 'blue',
-                        0.2: 'cyan',
-                        0.4: 'lime',
-                        0.6: 'yellow',
-                        0.8: 'orange',
-                        1.0: 'red'
-                    }
-                };
-        
-                if (typeof L.heatLayer === 'function') {
-                    heatmapLayer = L.heatLayer(heatData, heatConfig).addTo(map);
-                    console.log(`✅ Heatmap actualizado: radius=${radius}px, blur=${blur}px`);
-                } else {
-                    heatmapLayer = crearHeatmapFallback(heatmapPoints, map, radius, blur);
-                    heatmapLayer.addTo(map);
-                    console.log(`✅ Heatmap fallback actualizado: radius=${radius}px, blur=${blur}px`);
+                // Método 2: recrear (fallback)
+                if (heatmapDataCache && heatmapDataCache.data && heatmapDataCache.data.length > 0) {
+                    const currentData = heatmapDataCache;
+                    map.removeLayer(heatmapLayer);
+                    heatmapLayer = new HeatmapOverlay(heatmapConfig);
+                    map.addLayer(heatmapLayer);
+                    heatmapLayer.setData(currentData);
                 }
             } catch (e) {
-                console.warn('⚠️ Error al actualizar heatmap:', e);
+                console.warn('⚠️ Error en actualizarHeatmap:', e.message);
+                if (currentMode === 'heatmap' && geoJsonData) {
+                    updateMap();
+                }
             }
         }
 
