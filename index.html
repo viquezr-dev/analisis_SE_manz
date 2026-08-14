@@ -1305,23 +1305,32 @@
         // ================================================================
         // ★ CORRECCIÓN: FORZAR ACTUALIZACIÓN DEL HEATMAP AL MOVER/ZOOM
         // ================================================================
-        map.on('moveend zoomend', function() {
+        let moveTimeout = null;
+
+        map.on('move', function() {
             if (currentMode === 'heatmap' && heatmapLayer && heatmapDataCache) {
-                // Recrear el heatmap para que se alinee correctamente
-                try {
-                    const radius = parseInt(document.getElementById('radius-slider').value) || 10;
-                    const blur = parseInt(document.getElementById('blur-slider').value) || 5;
-                    
-                    heatmapConfig.radius = radius;
-                    heatmapConfig.blur = blur;
-                    
-                    map.removeLayer(heatmapLayer);
-                    heatmapLayer = new HeatmapOverlay(heatmapConfig);
-                    map.addLayer(heatmapLayer);
-                    heatmapLayer.setData(heatmapDataCache);
-                } catch (e) {
-                    console.warn('⚠️ Error al actualizar heatmap en zoom:', e);
-                }
+                // Limpiar timeout anterior para no saturar
+                clearTimeout(moveTimeout);
+                
+                moveTimeout = setTimeout(() => {
+                    try {
+                        // Recrear el heatmap para alinearlo correctamente
+                        const radius = parseInt(document.getElementById('radius-slider').value) || 10;
+                        const blur = parseInt(document.getElementById('blur-slider').value) || 5;
+                        
+                        heatmapConfig.radius = radius;
+                        heatmapConfig.blur = blur;
+                        
+                        if (map.hasLayer(heatmapLayer)) {
+                            map.removeLayer(heatmapLayer);
+                        }
+                        heatmapLayer = new HeatmapOverlay(heatmapConfig);
+                        map.addLayer(heatmapLayer);
+                        heatmapLayer.setData(heatmapDataCache);
+                    } catch (e) {
+                        // Silenciar errores para no saturar la consola
+                    }
+                }, 30); // 30ms de debounce para suavizar
             }
         });
         
