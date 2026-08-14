@@ -883,82 +883,185 @@
         // ================================================================
         // Esta función crea un heatmap usando canvas directamente si L.heatLayer no está disponible
         function crearHeatmapFallback(puntos, map, radius, blur) {
-            // Crear un layer de canvas para el heatmap
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            // Crear un layer personalizado de Leaflet
+
             const HeatmapLayer = L.Layer.extend({
+        
                 onAdd: function() {
+        
+                    this._map = map;
+        
+                    // Usamos el overlayPane de Leaflet
                     const pane = this.getPane();
+        
                     this._canvas = document.createElement('canvas');
+        
                     this._canvas.style.position = 'absolute';
                     this._canvas.style.top = '0';
                     this._canvas.style.left = '0';
                     this._canvas.style.pointerEvents = 'none';
-                    this._canvas.style.width = '100%';
-                    this._canvas.style.height = '100%';
+        
                     pane.appendChild(this._canvas);
+        
                     this._ctx = this._canvas.getContext('2d');
+        
                     this._reset();
                     this._draw();
-                    this._moveHandler = () => { this._reset(); this._draw(); };
-                    map.on('move zoom resize', this._moveHandler);
+        
+                    // Redibujar siempre que cambie la posición o zoom
+                    this._moveHandler = () => {
+                        this._reset();
+                        this._draw();
+                    };
+        
+                    map.on(
+                        'move zoom resize viewreset',
+                        this._moveHandler,
+                        this
+                    );
                 },
+        
                 onRemove: function() {
-                    if (this._moveHandler) this._map.off('move zoom resize', this._moveHandler);
+        
+                    if (this._moveHandler) {
+                        this._map.off(
+                            'move zoom resize viewreset',
+                            this._moveHandler,
+                            this
+                        );
+                    }
+        
                     if (this._canvas && this._canvas.parentNode) {
                         this._canvas.parentNode.removeChild(this._canvas);
                     }
+        
+                    this._canvas = null;
+                    this._ctx = null;
                 },
+        
                 _reset: function() {
+        
+                    if (!this._canvas) return;
+        
                     const size = this._map.getSize();
+        
+                    // Canvas exactamente del tamaño del mapa
                     this._canvas.width = size.x;
                     this._canvas.height = size.y;
+        
                     this._canvas.style.width = size.x + 'px';
                     this._canvas.style.height = size.y + 'px';
                 },
+        
                 _draw: function() {
-                    if (!this._ctx) return;
-                    
+        
+                    if (!this._ctx || !this._map) return;
+        
                     const ctx = this._ctx;
                     const map = this._map;
                     const size = map.getSize();
-                    
-                    ctx.clearRect(0, 0, size.x, size.y);
-                    
-                    // Dibujar puntos con gradiente radial
-                    const radiusPx = radius || 10;
-                    const blurPx = blur || 5;
-                    
-                    // Encontrar max intensity para normalizar
+        
+                    ctx.clearRect(
+                        0,
+                        0,
+                        size.x,
+                        size.y
+                    );
+        
+                    const radiusPx = Number(radius) || 10;
+                    const blurPx = Number(blur) || 5;
+        
                     for (const p of puntos) {
-                        const point = map.latLngToContainerPoint([p.lat, p.lng]);
-                        const intensity = Math.max(0.15, Math.min(1, p.intensity));
-                        
-                        const grad = ctx.createRadialGradient(
-                            point.x, point.y, 0,
-                            point.x, point.y, radiusPx + blurPx
+        
+                        if (
+                            !Number.isFinite(p.lat) ||
+                            !Number.isFinite(p.lng)
+                        ) {
+                            continue;
+                        }
+        
+                        // ====================================================
+                        // IMPORTANTE:
+                        // El canvas está dentro de overlayPane.
+                        // Por eso usamos layerPoint y NO containerPoint.
+                        // ====================================================
+                        const point = map.latLngToLayerPoint([
+                            p.lat,
+                            p.lng
+                        ]);
+        
+                        const intensity = Math.max(
+                            0.15,
+                            Math.min(1, Number(p.intensity) || 0.15)
                         );
-                        
-                        // Color según intensidad (azul -> cyan -> verde -> amarillo -> rojo)
-                        const r = Math.min(255, Math.round(intensity * 255));
-                        const g = Math.min(255, Math.round((1 - Math.abs(intensity - 0.5) * 2) * 255));
-                        const b = Math.min(255, Math.round((1 - intensity) * 255));
-                        
-                        const alpha = 0.3 + intensity * 0.5;
-                        grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha})`);
-                        grad.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${alpha * 0.6})`);
-                        grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
-                        
+        
+                        const radioTotal = radiusPx + blurPx;
+        
+                        // ====================================================
+                        // GRADIENTE RADIAL
+                        // ====================================================
+                        const grad = ctx.createRadialGradient(
+                            point.x,
+                            point.y,
+                            0,
+                            point.x,
+                            point.y,
+                            radioTotal
+                        );
+        
+                        // Azul → Cyan → Verde → Amarillo → Rojo
+                        const r = Math.min(
+                            255,
+                            Math.round(intensity * 255)
+                        );
+        
+                        const g = Math.min(
+                            255,
+                            Math.round(
+                                (1 - Math.abs(intensity - 0.5) * 2) * 255
+                            )
+                        );
+        
+                        const b = Math.min(
+                            255,
+                            Math.round((1 - intensity) * 255)
+                        );
+        
+                        const alpha = 0.30 + intensity * 0.50;
+        
+                        grad.addColorStop(
+                            0,
+                            `rgba(${r}, ${g}, ${b}, ${alpha})`
+                        );
+        
+                        grad.addColorStop(
+                            0.5,
+                            `rgba(${r}, ${g}, ${b}, ${alpha * 0.60})`
+                        );
+        
+                        grad.addColorStop(
+                            1,
+                            `rgba(${r}, ${g}, ${b}, 0)`
+                        );
+        
+                        // ====================================================
+                        // DIBUJAR
+                        // ====================================================
                         ctx.beginPath();
-                        ctx.arc(point.x, point.y, radiusPx + blurPx, 0, Math.PI * 2);
+        
+                        ctx.arc(
+                            point.x,
+                            point.y,
+                            radioTotal,
+                            0,
+                            Math.PI * 2
+                        );
+        
                         ctx.fillStyle = grad;
                         ctx.fill();
                     }
                 }
             });
-            
+        
             return new HeatmapLayer();
         }
 
@@ -1022,8 +1125,13 @@
         
                     // Intentar usar L.heatLayer
                     if (typeof L.heatLayer === 'function') {
-                        heatmapLayer = L.heatLayer(heatData, heatConfig).addTo(map);
-                        console.log(`🔥 Heatmap generado con L.heatLayer: ${puntos.length} puntos`);
+                        heatmapLayer = crearHeatmapFallback(
+                            puntos,
+                            map,
+                            radius,
+                            blur
+                        );
+                        console.log(`🔥 Heatmap corregido: ${puntos.length} puntos`);
                     } else {
                         // Fallback: usar canvas personalizado
                         console.warn('⚠️ L.heatLayer no disponible, usando fallback con canvas');
@@ -1184,8 +1292,18 @@
                 };
         
                 if (typeof L.heatLayer === 'function') {
-                    heatmapLayer = L.heatLayer(heatData, heatConfig).addTo(map);
-                    console.log(`✅ Heatmap actualizado: radius=${radius}px, blur=${blur}px`);
+                    heatmapLayer = crearHeatmapFallback(
+                        heatmapPoints,
+                        map,
+                        radius,
+                        blur
+                    );
+                    
+                    heatmapLayer.addTo(map);
+
+                    console.log(
+                        `✅ Heatmap actualizado correctamente: radius=${radius}px, blur=${blur}px`
+                    );
                 } else {
                     heatmapLayer = crearHeatmapFallback(heatmapPoints, map, radius, blur);
                     heatmapLayer.addTo(map);
