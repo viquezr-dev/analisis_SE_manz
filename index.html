@@ -1071,7 +1071,7 @@
         // ================================================================
         async function loadCorregimientos() {
             try {
-                const response = await fetch('corregimiento.geojson');
+                const response = await fetch('corregimientos.geojson');
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 const data = await response.json();
                 corregimientosData = data;
