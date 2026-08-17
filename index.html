@@ -58,6 +58,9 @@
         .btn-stats:hover { background: #1e4f7a; }
         .btn-reset { background: #fee2e2; color: #991b1b; }
         .btn-reset:hover { background: #fca5a5; }
+        .btn-corregimientos { background: #6c757d; color: white; }
+        .btn-corregimientos:hover { background: #5a6268; }
+        .btn-corregimientos.active { background: #28a745; }
 
         .filtros-container { margin-top: 5px; padding: 5px 7px; background: #f8f9fa; border-radius: 5px; border-left: 3px solid #d94f4f; max-height: 160px; overflow-y: auto; }
         .filtros-container h4 { font-size: 10px; color: #1a2a3a; margin-bottom: 3px; }
@@ -165,6 +168,12 @@
             <button class="btn-reset" onclick="resetFiltros()">🔄 Resetear</button>
         </div>
 
+        <div class="action-buttons" style="margin-top:4px;">
+            <button class="btn-corregimientos active" onclick="toggleCorregimientos()" id="btnCorregimientos">
+                🗺️ Corregimientos
+            </button>
+        </div>
+
         <div id="heatmap-controls" class="heatmap-controls">
             <label>Radio: <span id="radius-val">10</span>px</label>
             <input type="range" id="radius-slider" min="4" max="30" value="10">
@@ -239,6 +248,11 @@
         let currentMode = 'polygon';
         let heatmapLayer = null;
         let heatmapPoints = [];
+
+        // Variables para corregimientos
+        let corregimientosLayer = null;
+        let corregimientosData = null;
+        let corregimientosVisible = true;
 
         // ================================================================
         // 3. PALETAS DE COLORES Y FUNCIONES DE RANGOS
@@ -881,7 +895,6 @@
         // ================================================================
         // 11. FUNCIÓN DE HEATMAP PERSONALIZADA (FALLBACK)
         // ================================================================
-        // Esta función crea un heatmap usando canvas directamente si L.heatLayer no está disponible
         function crearHeatmapFallback(puntos, map, radius, blur) {
 
             const HeatmapLayer = L.Layer.extend({
@@ -979,11 +992,6 @@
                             continue;
                         }
         
-                        // ====================================================
-                        // IMPORTANTE:
-                        // El canvas está dentro de overlayPane.
-                        // Por eso usamos layerPoint y NO containerPoint.
-                        // ====================================================
                         const point = map.latLngToLayerPoint([
                             p.lat,
                             p.lng
@@ -996,9 +1004,6 @@
         
                         const radioTotal = radiusPx + blurPx;
         
-                        // ====================================================
-                        // GRADIENTE RADIAL
-                        // ====================================================
                         const grad = ctx.createRadialGradient(
                             point.x,
                             point.y,
@@ -1008,7 +1013,6 @@
                             radioTotal
                         );
         
-                        // Azul → Cyan → Verde → Amarillo → Rojo
                         const r = Math.min(
                             255,
                             Math.round(intensity * 255)
@@ -1043,9 +1047,6 @@
                             `rgba(${r}, ${g}, ${b}, 0)`
                         );
         
-                        // ====================================================
-                        // DIBUJAR
-                        // ====================================================
                         ctx.beginPath();
         
                         ctx.arc(
@@ -1066,7 +1067,105 @@
         }
 
         // ================================================================
-        // 12. ACTUALIZAR MAPA
+        // 12. CARGA DE CORREGIMIENTOS
+        // ================================================================
+        async function loadCorregimientos() {
+            try {
+                const response = await fetch('corregimientos.geojson');
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const data = await response.json();
+                corregimientosData = data;
+                console.log('✅ Corregimientos cargados:', data.features.length, 'polígonos');
+                
+                // Crear pane para corregimientos (detrás de las manzanas)
+                if (!map.getPane('corregimientos')) {
+                    map.createPane('corregimientos');
+                    map.getPane('corregimientos').style.zIndex = 300;
+                }
+                
+                agregarCapaCorregimientos();
+            } catch (error) {
+                console.warn('⚠️ No se pudo cargar corregimientos.geojson:', error.message);
+                console.log('💡 El mapa funcionará sin la capa de corregimientos');
+            }
+        }
+
+        function agregarCapaCorregimientos() {
+            if (!corregimientosData) return;
+            
+            // Remover capa anterior si existe
+            if (corregimientosLayer) {
+                map.removeLayer(corregimientosLayer);
+            }
+            
+            corregimientosLayer = L.geoJSON(corregimientosData, {
+                pane: 'corregimientos',
+                style: {
+                    fillColor: 'transparent',
+                    fillOpacity: 0,
+                    color: 'rgba(120, 120, 120, 0.25)',
+                    weight: 0.8,
+                    dashArray: '4, 4',
+                    opacity: 0.3
+                },
+                onEachFeature: function(feature, layer) {
+                    const props = feature.properties;
+                    const nombre = props.CORR_NOMB || 'Sin nombre';
+                    const distrito = props.DIST_NOMB || '';
+                    const provincia = props.PROV_NOMB || '';
+                    const codigo = props.CODIGO || '';
+                    
+                    layer.bindPopup(`
+                        <div style="font-family:'Segoe UI',sans-serif;font-size:11px;min-width:150px;">
+                            <strong style="font-size:12px;color:#1a2a3a;">${nombre}</strong><br>
+                            ${distrito ? `📍 Distrito: ${distrito}<br>` : ''}
+                            ${provincia ? `🏛️ Provincia: ${provincia}<br>` : ''}
+                            ${codigo ? `📋 Código: ${codigo}` : ''}
+                        </div>
+                    `, { className: 'corregimiento-popup' });
+                    
+                    // Agregar tooltip al pasar el mouse
+                    layer.bindTooltip(props.CORR_NOMB || 'Corregimiento', {
+                        permanent: false,
+                        direction: 'center',
+                        className: 'corregimiento-tooltip',
+                        offset: [0, 0]
+                    });
+                }
+            });
+            
+            if (corregimientosVisible) {
+                corregimientosLayer.addTo(map);
+            }
+            
+            console.log('✅ Capa de corregimientos agregada (tenue)');
+        }
+
+        // ================================================================
+        // 13. CONTROL DE VISIBILIDAD DE CORREGIMIENTOS
+        // ================================================================
+        function toggleCorregimientos() {
+            if (!corregimientosLayer) {
+                alert('No hay datos de corregimientos cargados');
+                return;
+            }
+            
+            corregimientosVisible = !corregimientosVisible;
+            const btn = document.getElementById('btnCorregimientos');
+            
+            if (corregimientosVisible) {
+                map.addLayer(corregimientosLayer);
+                btn.classList.add('active');
+                btn.textContent = '🗺️ Corregimientos';
+            } else {
+                map.removeLayer(corregimientosLayer);
+                btn.classList.remove('active');
+                btn.textContent = '🗺️ Ocultos';
+            }
+        }
+
+        // ================================================================
+        // 14. ACTUALIZAR MAPA
         // ================================================================
         function updateMap() {
             if (!geoJsonData) return;
@@ -1164,6 +1263,7 @@
                             <span>Alto</span>
                         </div>
                         <div class="legend-desc">💡 ${puntos.length} puntos · ${variableLabels[variable] || variable}</div>
+                        ${corregimientosData ? `<div style="margin-top:4px;padding-top:3px;border-top:1px dashed #ddd;font-size:9px;color:#888;">🗺️ Límites de corregimientos (tenues)</div>` : ''}
                     `;
         
                     document.getElementById('info-label').textContent = variableLabels[variable] || variable;
@@ -1195,7 +1295,13 @@
                             color = getColorByValue(variable, numVal);
                         }
                     }
-                    return { fillColor: color, weight: 1, opacity: 0.8, color: '#333333', fillOpacity: 0.8 };
+                    return { 
+                        fillColor: color, 
+                        weight: 1.5,
+                        opacity: 0.9, 
+                        color: '#444444',
+                        fillOpacity: 0.85
+                    };
                 },
                 onEachFeature: function(feature, layer) {
                     layer.bindPopup(crearPopup(feature.properties));
@@ -1214,7 +1320,7 @@
                                 color = getColorByValue(variable, numVal);
                             }
                         }
-                        this.setStyle({ weight: 1, color: '#333333', fillColor: color, fillOpacity: 0.8 });
+                        this.setStyle({ weight: 1.5, color: '#444444', fillColor: color, fillOpacity: 0.85 });
                     });
                 }
             }).addTo(map);
@@ -1225,7 +1331,7 @@
         }
 
         // ================================================================
-        // 13. LEYENDA
+        // 15. LEYENDA
         // ================================================================
         function updateLegend(variable, features) {
             const legendDiv = document.getElementById('legend');
@@ -1250,13 +1356,21 @@
                 }
             }
 
+            // Añadir información de corregimientos
+            if (corregimientosData) {
+                html += `<div style="margin-top:5px;padding-top:4px;border-top:1px dashed #ddd;font-size:9px;color:#888;">
+                    <span>🗺️ Límites de corregimientos</span>
+                    <span style="display:block;font-size:8px;color:#aaa;">(líneas punteadas tenues)</span>
+                </div>`;
+            }
+
             const desc = descripcionIndicador[variable] || '';
             if (desc) html += `<div class="legend-desc">💡 ${desc}</div>`;
             legendDiv.innerHTML = html;
         }
 
         // ================================================================
-        // 14. ACTUALIZAR HEATMAP (sliders)
+        // 16. ACTUALIZAR HEATMAP (sliders)
         // ================================================================
         function actualizarHeatmapParams() {
             if (!heatmapPoints || heatmapPoints.length === 0) {
@@ -1315,7 +1429,7 @@
         }
 
         // ================================================================
-        // 15. VERIFICAR LIBRERÍAS
+        // 17. VERIFICAR LIBRERÍAS
         // ================================================================
         function verificarLibrerias() {
             console.log('=== VERIFICACIÓN DE LIBRERÍAS ===');
@@ -1331,7 +1445,7 @@
         }
 
         // ================================================================
-        // 16. CARGA DEL GEOJSON
+        // 18. CARGA DEL GEOJSON
         // ================================================================
         async function loadGeoJSON() {
             try {
@@ -1364,7 +1478,7 @@
         }
 
         // ================================================================
-        // 17. EVENTOS
+        // 19. EVENTOS
         // ================================================================
         document.getElementById('variable-select').addEventListener('change', function(e) {
             currentVariable = e.target.value;
@@ -1436,15 +1550,25 @@
         window.exportarCSV = exportarCSV;
         window.mostrarEstadisticas = mostrarEstadisticas;
         window.closeStats = closeStats;
+        window.toggleCorregimientos = toggleCorregimientos;
 
         // ================================================================
-        // 18. INICIO
+        // 20. INICIO
         // ================================================================
         console.log('🗺️ Mapa de Manzanas iniciado – RAUL VIQUEZ');
         console.log('📌 Usando leaflet-heatmap con fallback canvas');
         
         verificarLibrerias();
-        loadGeoJSON();
+
+        // Cargar ambos archivos en paralelo
+        Promise.all([
+            loadGeoJSON(),
+            loadCorregimientos()
+        ]).then(() => {
+            console.log('✅ Todas las capas cargadas correctamente');
+        }).catch(err => {
+            console.warn('⚠️ Algunas capas no se cargaron:', err.message);
+        });
     </script>
 
 </body>
