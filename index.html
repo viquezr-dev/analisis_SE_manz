@@ -1006,15 +1006,25 @@
                 map.removeLayer(corregimientosLayer);
             }
             
+            // Asegurar que el pane existe y está en el orden correcto
+            if (!map.getPane('corregimientos')) {
+                map.createPane('corregimientos');
+                // zIndex: 400 está debajo de las manzanas (que suelen estar en 500-600)
+                map.getPane('corregimientos').style.zIndex = 400;
+            }
+            
             corregimientosLayer = L.geoJSON(corregimientosData, {
                 pane: 'corregimientos',
-                style: {
-                    fillColor: 'transparent',
-                    fillOpacity: 0,
-                    color: 'rgba(120, 120, 120, 0.25)',
-                    weight: 0.8,
-                    dashArray: '4, 4',
-                    opacity: 0.3
+                style: function(feature) {
+                    // Estilo más visible
+                    return {
+                        fillColor: 'rgba(200, 200, 200, 0.05)',  // Relleno muy tenue
+                        fillOpacity: 0.1,
+                        color: '#666666',           // Gris más oscuro
+                        weight: 1.8,                // Línea más gruesa
+                        dashArray: '6, 4',          // Punteado más visible
+                        opacity: 0.6                // Más opaco
+                    };
                 },
                 onEachFeature: function(feature, layer) {
                     const props = feature.properties;
@@ -1023,20 +1033,45 @@
                     const provincia = props.PROV_NOMB || '';
                     const codigo = props.CODIGO || '';
                     
+                    // Popup con información
                     layer.bindPopup(`
-                        <div style="font-family:'Segoe UI',sans-serif;font-size:11px;min-width:150px;">
-                            <strong style="font-size:12px;color:#1a2a3a;">${nombre}</strong><br>
+                        <div style="font-family:'Segoe UI',sans-serif;font-size:12px;min-width:160px;">
+                            <strong style="font-size:13px;color:#1a2a3a;">🏛️ ${nombre}</strong><br>
                             ${distrito ? `📍 Distrito: ${distrito}<br>` : ''}
                             ${provincia ? `🏛️ Provincia: ${provincia}<br>` : ''}
                             ${codigo ? `📋 Código: ${codigo}` : ''}
                         </div>
                     `, { className: 'corregimiento-popup' });
                     
-                    layer.bindTooltip(props.CORR_NOMB || 'Corregimiento', {
+                    // Tooltip con el nombre al pasar el mouse
+                    layer.bindTooltip(nombre, {
                         permanent: false,
                         direction: 'center',
                         className: 'corregimiento-tooltip',
-                        offset: [0, 0]
+                        offset: [0, 0],
+                        opacity: 0.8
+                    });
+                    
+                    // Efecto hover para resaltar el corregimiento
+                    layer.on('mouseover', function() {
+                        this.setStyle({
+                            color: '#d94f4f',
+                            weight: 2.5,
+                            opacity: 0.9,
+                            fillColor: 'rgba(217, 79, 79, 0.08)',
+                            fillOpacity: 0.15
+                        });
+                        this.bringToFront();
+                    });
+                    
+                    layer.on('mouseout', function() {
+                        this.setStyle({
+                            color: '#666666',
+                            weight: 1.8,
+                            opacity: 0.6,
+                            fillColor: 'rgba(200, 200, 200, 0.05)',
+                            fillOpacity: 0.1
+                        });
                     });
                 }
             });
@@ -1045,7 +1080,7 @@
                 corregimientosLayer.addTo(map);
             }
             
-            console.log('✅ Capa de corregimientos agregada (tenue)');
+            console.log('✅ Capa de corregimientos agregada (más visible)');
         }
 
         // ================================================================
