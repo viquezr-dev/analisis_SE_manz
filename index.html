@@ -61,6 +61,9 @@
         .btn-corregimientos { background: #6c757d; color: white; }
         .btn-corregimientos:hover { background: #5a6268; }
         .btn-corregimientos.active { background: #28a745; }
+        .btn-manzanas { background: #6c757d; color: white; }
+        .btn-manzanas:hover { background: #5a6268; }
+        .btn-manzanas.active { background: #007bff; }
 
         .filtros-container { margin-top: 5px; padding: 5px 7px; background: #f8f9fa; border-radius: 5px; border-left: 3px solid #d94f4f; max-height: 160px; overflow-y: auto; }
         .filtros-container h4 { font-size: 10px; color: #1a2a3a; margin-bottom: 3px; }
@@ -172,6 +175,9 @@
             <button class="btn-corregimientos active" onclick="toggleCorregimientos()" id="btnCorregimientos">
                 🗺️ Corregimientos
             </button>
+            <button class="btn-manzanas active" onclick="toggleManzanas()" id="btnManzanas">
+                🏠 Manzanas
+            </button>
         </div>
 
         <div id="heatmap-controls" class="heatmap-controls">
@@ -249,6 +255,9 @@
         let corregimientosData = null;
         let corregimientosVisible = true;
         let corregimientosCargados = false;
+
+        // Variable para control de visibilidad de manzanas
+        let manzanasVisible = true;
 
         // ================================================================
         // 3. PALETAS DE COLORES Y FUNCIONES DE RANGOS
@@ -1112,7 +1121,46 @@
         }
 
         // ================================================================
-        // 14. ACTUALIZAR MAPA
+        // 14. CONTROL DE VISIBILIDAD DE MANZANAS
+        // ================================================================
+        function toggleManzanas() {
+            const btn = document.getElementById('btnManzanas');
+            
+            manzanasVisible = !manzanasVisible;
+            
+            if (manzanasVisible) {
+                // Mostrar manzanas
+                if (currentMode === 'heatmap') {
+                    if (heatmapCanvasLayer) {
+                        map.addLayer(heatmapCanvasLayer);
+                    }
+                    if (currentLayer) {
+                        map.addLayer(currentLayer);
+                    }
+                } else {
+                    if (currentLayer) {
+                        map.addLayer(currentLayer);
+                    }
+                }
+                btn.classList.add('active');
+                btn.textContent = '🏠 Manzanas';
+                document.getElementById('info-box').style.display = 'block';
+            } else {
+                // Ocultar manzanas
+                if (currentLayer) {
+                    map.removeLayer(currentLayer);
+                }
+                if (heatmapCanvasLayer && currentMode === 'heatmap') {
+                    map.removeLayer(heatmapCanvasLayer);
+                }
+                btn.classList.remove('active');
+                btn.textContent = '🏠 Ocultas';
+                document.getElementById('info-box').style.display = 'none';
+            }
+        }
+
+        // ================================================================
+        // 15. ACTUALIZAR MAPA
         // ================================================================
         function updateMap() {
             if (!geoJsonData) return;
@@ -1154,7 +1202,45 @@
                         radius: radius,
                         blur: blur
                     });
-                    heatmapCanvasLayer.addTo(map);
+                    
+                    // Solo añadir la capa si las manzanas están visibles
+                    if (manzanasVisible) {
+                        heatmapCanvasLayer.addTo(map);
+                    }
+        
+                    // Polígonos transparentes para interacción (solo si están visibles)
+                    if (manzanasVisible) {
+                        currentLayer = L.geoJSON({
+                            type: 'FeatureCollection',
+                            features: featuresFiltradas
+                        }, {
+                            style: {
+                                fillColor: 'transparent',
+                                fillOpacity: 0.01,
+                                color: 'rgba(255,255,255,0.2)',
+                                weight: 0.5
+                            },
+                            onEachFeature: function(feature, layer) {
+                                layer.bindPopup(crearPopup(feature.properties));
+                            }
+                        }).addTo(map);
+                    } else {
+                        // Mantener los datos pero no mostrar la capa
+                        currentLayer = L.geoJSON({
+                            type: 'FeatureCollection',
+                            features: featuresFiltradas
+                        }, {
+                            style: {
+                                fillColor: 'transparent',
+                                fillOpacity: 0,
+                                color: 'transparent',
+                                weight: 0
+                            },
+                            onEachFeature: function(feature, layer) {
+                                layer.bindPopup(crearPopup(feature.properties));
+                            }
+                        });
+                    }
         
                     document.getElementById('legend').innerHTML = `
                         <div class="legend-title">🔥 Mapa de Calor</div>
@@ -1169,6 +1255,9 @@
         
                     document.getElementById('info-label').textContent = variableLabels[variable] || variable;
                     document.getElementById('info-value').textContent = `${puntos.length} manzanas en calor`;
+                    
+                    // Mostrar/ocultar info-box según visibilidad
+                    document.getElementById('info-box').style.display = manzanasVisible ? 'block' : 'none';
                 } catch (e) {
                     console.error('❌ Error al crear heatmap:', e);
                     document.getElementById('info-value').textContent = '⚠️ Error al generar el heatmap';
@@ -1224,15 +1313,23 @@
                         this.setStyle({ weight: 1.5, color: '#444444', fillColor: color, fillOpacity: 0.85 });
                     });
                 }
-            }).addTo(map);
+            });
+            
+            // Solo añadir la capa si las manzanas están visibles
+            if (manzanasVisible) {
+                currentLayer.addTo(map);
+            }
         
             updateLegend(variable, features);
             document.getElementById('info-label').textContent = variableLabels[variable] || variable;
             document.getElementById('info-value').textContent = 'Clic en una manzana para detalles';
+            
+            // Mostrar/ocultar info-box según visibilidad
+            document.getElementById('info-box').style.display = manzanasVisible ? 'block' : 'none';
         }
 
         // ================================================================
-        // 15. LEYENDA
+        // 16. LEYENDA
         // ================================================================
         function updateLegend(variable, features) {
             const legendDiv = document.getElementById('legend');
@@ -1270,7 +1367,7 @@
         }
 
         // ================================================================
-        // 16. ACTUALIZAR HEATMAP (sliders)
+        // 17. ACTUALIZAR HEATMAP (sliders)
         // ================================================================
         function actualizarHeatmapParams() {
             if (!heatmapPoints || heatmapPoints.length === 0) {
@@ -1291,7 +1388,11 @@
                     radius: radius,
                     blur: blur
                 });
-                heatmapCanvasLayer.addTo(map);
+                
+                // Solo añadir si las manzanas están visibles
+                if (manzanasVisible) {
+                    heatmapCanvasLayer.addTo(map);
+                }
                 
                 console.log(`✅ Heatmap actualizado: radius=${radius}px, blur=${blur}px`);
             } catch (e) {
@@ -1300,7 +1401,7 @@
         }
 
         // ================================================================
-        // 17. VERIFICAR LIBRERÍAS
+        // 18. VERIFICAR LIBRERÍAS
         // ================================================================
         function verificarLibrerias() {
             console.log('=== VERIFICACIÓN DE LIBRERÍAS ===');
@@ -1311,7 +1412,7 @@
         }
 
         // ================================================================
-        // 18. CARGA DEL GEOJSON
+        // 19. CARGA DEL GEOJSON
         // ================================================================
         async function loadGeoJSON() {
             try {
@@ -1344,7 +1445,7 @@
         }
 
         // ================================================================
-        // 19. EVENTOS
+        // 20. EVENTOS
         // ================================================================
         document.getElementById('variable-select').addEventListener('change', function(e) {
             currentVariable = e.target.value;
@@ -1417,9 +1518,10 @@
         window.mostrarEstadisticas = mostrarEstadisticas;
         window.closeStats = closeStats;
         window.toggleCorregimientos = toggleCorregimientos;
+        window.toggleManzanas = toggleManzanas;
 
         // ================================================================
-        // 20. INICIO
+        // 21. INICIO
         // ================================================================
         console.log('🗺️ Mapa de Manzanas iniciado – RAUL VIQUEZ');
         console.log('📌 Heatmap implementado con canvas propio (sin dependencias externas)');
